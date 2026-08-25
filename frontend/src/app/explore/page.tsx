@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FiArrowLeft, FiLoader, FiMap, FiFilter } from 'react-icons/fi';
+import {
+  ComposableMap,
+  Geographies,
+  Geography,
+  Marker,
+} from 'react-simple-maps';
 import { fetchHistory, fetchHistoryItem, isLoggedIn } from '@/lib/api';
 
 const MAX_DETAILED_RUNS = 25;
@@ -17,13 +23,9 @@ type Occurrence = {
   lng: number;
 };
 
-// Equirectangular projection: lng -180..180 -> x 0..MAP_W, lat 90..-90 -> y 0..MAP_H
-const MAP_W = 720;
-const MAP_H = 360;
-const project = (lat: number, lng: number) => ({
-  x: ((lng + 180) / 360) * MAP_W,
-  y: ((90 - lat) / 180) * MAP_H,
-});
+// Real-world land boundaries (110m resolution) for the basemap. Loaded
+// client-side by react-simple-maps and cached by the browser.
+const WORLD_TOPOJSON = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
 const classificationColor: Record<string, string> = {
   Fish: '#60a5fa',
@@ -197,36 +199,51 @@ export default function ExplorePage() {
 
             {/* Map */}
             <div className="lg:col-span-3 rounded-lg bg-gray-800 p-4">
-              <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className="w-full h-auto rounded bg-gradient-to-b from-blue-950 to-gray-900">
-                {/* graticule */}
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <line key={`v${i}`} x1={(i * MAP_W) / 6} y1={0} x2={(i * MAP_W) / 6} y2={MAP_H} stroke="#334155" strokeWidth={0.5} />
-                ))}
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <line key={`h${i}`} x1={0} y1={(i * MAP_H) / 4} x2={MAP_W} y2={(i * MAP_H) / 4} stroke="#334155" strokeWidth={0.5} />
-                ))}
-                {/* equator */}
-                <line x1={0} y1={MAP_H / 2} x2={MAP_W} y2={MAP_H / 2} stroke="#475569" strokeWidth={1} strokeDasharray="4 3" />
+              <div className="w-full rounded bg-gradient-to-b from-blue-950 to-gray-900 overflow-hidden">
+                <ComposableMap
+                  projection="geoEquirectangular"
+                  projectionConfig={{ scale: 130 }}
+                  width={720}
+                  height={380}
+                  style={{ width: '100%', height: 'auto' }}
+                >
+                  <Geographies geography={WORLD_TOPOJSON}>
+                    {({ geographies }) =>
+                      geographies.map((geo) => (
+                        <Geography
+                          key={geo.rsmKey}
+                          geography={geo}
+                          fill="#1e293b"
+                          stroke="#334155"
+                          strokeWidth={0.5}
+                          style={{
+                            default: { outline: 'none' },
+                            hover: { outline: 'none', fill: '#28374d' },
+                            pressed: { outline: 'none' },
+                          }}
+                        />
+                      ))
+                    }
+                  </Geographies>
 
-                {filtered.map((o, i) => {
-                  const { x, y } = project(o.lat, o.lng);
-                  const color = classificationColor[o.classification] || classificationColor.Unknown;
-                  return (
-                    <circle
-                      key={`${o.species}-${i}`}
-                      cx={x}
-                      cy={y}
-                      r={2.5 + o.confidence * 3}
-                      fill={color}
-                      fillOpacity={o.coordinateSource === 'simulated' ? 0.35 : 0.8}
-                      stroke={hovered === o ? '#fff' : 'none'}
-                      strokeWidth={1}
-                      onMouseEnter={() => setHovered(o)}
-                      onMouseLeave={() => setHovered(null)}
-                    />
-                  );
-                })}
-              </svg>
+                  {filtered.map((o, i) => {
+                    const color = classificationColor[o.classification] || classificationColor.Unknown;
+                    return (
+                      <Marker key={`${o.species}-${i}`} coordinates={[o.lng, o.lat]}>
+                        <circle
+                          r={2.5 + o.confidence * 3}
+                          fill={color}
+                          fillOpacity={o.coordinateSource === 'simulated' ? 0.35 : 0.8}
+                          stroke={hovered === o ? '#fff' : 'none'}
+                          strokeWidth={1}
+                          onMouseEnter={() => setHovered(o)}
+                          onMouseLeave={() => setHovered(null)}
+                        />
+                      </Marker>
+                    );
+                  })}
+                </ComposableMap>
+              </div>
 
               <div className="flex items-center justify-between mt-3 text-xs text-gray-400">
                 <div className="flex items-center gap-4">
