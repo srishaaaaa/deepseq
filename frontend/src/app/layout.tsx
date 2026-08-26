@@ -1,6 +1,6 @@
 import BubbleTrail from '@/components/BubbleTrail';
 import './globals.css';
-import Link from 'next/link';
+import { ToastProvider } from '@/components/ui/Toast';
 
 export const metadata = {
   title: 'eDNA Globe',
@@ -11,9 +11,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        {/* Global cinematic effects */}
-        <BubbleTrail />      {/* Water-like bubble trail */}
-        {children}
+        <ToastProvider>
+          {/* Global cinematic effects */}
+          <BubbleTrail />      {/* Water-like bubble trail */}
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

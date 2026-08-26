@@ -2,8 +2,10 @@
 
 import { useState, FormEvent } from 'react';
 import Link from 'next/link';
-import { FiArrowLeft, FiLoader, FiCheckCircle } from 'react-icons/fi';
+import { FiArrowLeft, FiCheckCircle } from 'react-icons/fi';
 import { requestPasswordReset } from '@/lib/api';
+import { Input } from '@/components/ui/Input';
+import Button from '@/components/ui/Button';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -28,17 +30,17 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-[#111827] text-white">
-      <div className="w-full max-w-sm rounded-lg bg-[#1F2937] p-8 shadow-2xl">
+      <div className="w-full max-w-sm rounded-(--radius-card) bg-[#1F2937] p-8 shadow-(--shadow-elevated) animate-fade-in">
         {sent ? (
-          <div className="text-center">
-            <FiCheckCircle className="mx-auto mb-4 h-12 w-12 text-green-400" />
+          <div className="text-center animate-fade-in">
+            <FiCheckCircle className="mx-auto mb-4 h-12 w-12 text-success-400" />
             <h1 className="text-2xl font-semibold mb-2">Check your email</h1>
             <p className="text-gray-400 mb-6">
               If an account exists for <span className="text-white">{email}</span>, we&apos;ve sent a link to reset your password.
             </p>
-            <Link href="/login" className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold hover:bg-blue-500">
-              <FiArrowLeft className="mr-2" /> Back to Login
-            </Link>
+            <Button href="/login" icon={<FiArrowLeft />}>
+              Back to Login
+            </Button>
           </div>
         ) : (
           <>
@@ -47,33 +49,25 @@ export default function ForgotPasswordPage() {
               Enter the email you signed up with and we&apos;ll send you a reset link.
             </p>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="email" className="text-sm font-medium text-gray-300">Email</label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="mt-1 block w-full appearance-none rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-white placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                />
-              </div>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                label="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+              />
 
-              {error && <p className="text-sm text-red-400">{error}</p>}
+              {error && <p className="text-sm text-danger-400">{error}</p>}
 
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="flex w-full items-center justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:cursor-not-allowed disabled:bg-gray-500"
-              >
-                {isLoading && <FiLoader className="animate-spin mr-2" />}
+              <Button type="submit" loading={isLoading} fullWidth>
                 {isLoading ? 'Sending...' : 'Send reset link'}
-              </button>
+              </Button>
             </form>
             <p className="mt-6 text-center text-sm text-gray-400">
-              <Link href="/login" className="font-medium text-blue-400 hover:text-blue-300">Back to Login</Link>
+              <Link href="/login" className="font-medium text-brand-400 hover:text-brand-300 transition-colors">Back to Login</Link>
             </p>
           </>
         )}

@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FiArrowLeft, FiGlobe, FiBarChart2, FiAlertTriangle } from 'react-icons/fi';
+import Card from '@/components/ui/Card';
+import PageHeader from '@/components/ui/PageHeader';
+import Button from '@/components/ui/Button';
 
 type BatchEntry = { filename: string; result: any };
 
@@ -32,12 +35,12 @@ export default function ComparePage() {
   if (error) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-900 text-white p-8 text-center">
-        <FiAlertTriangle size={48} className="text-red-500 mb-4" />
-        <h1 className="text-2xl font-semibold text-red-400">No Comparison Data</h1>
+        <FiAlertTriangle size={48} className="text-danger-500 mb-4" />
+        <h1 className="text-2xl font-semibold text-danger-400">No Comparison Data</h1>
         <p className="text-gray-400 mt-2 max-w-md">{error}</p>
-        <Link href="/upload" className="mt-6 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-500">
+        <Button href="/upload" className="mt-6">
           Go to Upload
-        </Link>
+        </Button>
       </div>
     );
   }
@@ -52,16 +55,18 @@ export default function ComparePage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
-      <div className="max-w-5xl mx-auto">
-        <Link href="/upload" className="inline-flex items-center text-blue-300 hover:text-blue-200 mb-6">
+      <div className="max-w-5xl mx-auto animate-fade-in">
+        <Link href="/upload" className="inline-flex items-center text-brand-300 hover:text-brand-200 transition-colors mb-6">
           <FiArrowLeft className="mr-2" /> Back to Upload
         </Link>
 
-        <h1 className="text-3xl font-bold mb-2">Site / Timepoint Comparison</h1>
-        <p className="text-gray-400 mb-8">Comparing biodiversity across {batch.length} uploaded files.</p>
+        <PageHeader
+          title="Site / Timepoint Comparison"
+          subtitle={`Comparing biodiversity across ${batch.length} uploaded files.`}
+        />
 
         {/* Species richness bar comparison */}
-        <section className="mb-8 rounded-lg bg-gray-800 p-6">
+        <Card padding="lg" className="mb-8">
           <h2 className="text-lg font-semibold mb-4">Species Richness</h2>
           <div className="space-y-3">
             {batch.map((entry) => {
@@ -72,9 +77,9 @@ export default function ComparePage() {
                     <span className="truncate">{entry.filename}</span>
                     <span className="text-gray-400">{count} species</span>
                   </div>
-                  <div className="h-3 rounded-full bg-gray-700 overflow-hidden">
+                  <div className="h-3 rounded-(--radius-pill) bg-gray-700 overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-green-500"
+                      className="h-full rounded-(--radius-pill) bg-success-500 transition-[width] duration-500 ease-out"
                       style={{ width: `${(count / maxSpecies) * 100}%` }}
                     />
                   </div>
@@ -82,10 +87,10 @@ export default function ComparePage() {
               );
             })}
           </div>
-        </section>
+        </Card>
 
         {/* Read depth comparison */}
-        <section className="mb-8 rounded-lg bg-gray-800 p-6">
+        <Card padding="lg" className="mb-8">
           <h2 className="text-lg font-semibold mb-4">Total Reads Processed</h2>
           <div className="space-y-3">
             {batch.map((entry) => {
@@ -96,9 +101,9 @@ export default function ComparePage() {
                     <span className="truncate">{entry.filename}</span>
                     <span className="text-gray-400">{count} reads</span>
                   </div>
-                  <div className="h-3 rounded-full bg-gray-700 overflow-hidden">
+                  <div className="h-3 rounded-(--radius-pill) bg-gray-700 overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-blue-500"
+                      className="h-full rounded-(--radius-pill) bg-info-500 transition-[width] duration-500 ease-out"
                       style={{ width: `${(count / maxReads) * 100}%` }}
                     />
                   </div>
@@ -106,10 +111,10 @@ export default function ComparePage() {
               );
             })}
           </div>
-        </section>
+        </Card>
 
         {/* Presence/absence matrix */}
-        <section className="mb-8 rounded-lg bg-gray-800 p-6 overflow-x-auto">
+        <Card padding="lg" className="mb-8 overflow-x-auto">
           <h2 className="text-lg font-semibold mb-4">Species Presence Across Sites</h2>
           <table className="min-w-full text-sm">
             <thead>
@@ -133,7 +138,7 @@ export default function ComparePage() {
                     return (
                       <td key={entry.filename} className="text-center py-2 px-3">
                         {found ? (
-                          <span className="text-green-400 font-semibold">{found.count}</span>
+                          <span className="text-success-400 font-semibold">{found.count}</span>
                         ) : (
                           <span className="text-gray-600">—</span>
                         )}
@@ -144,33 +149,27 @@ export default function ComparePage() {
               ))}
             </tbody>
           </table>
-        </section>
+        </Card>
 
         {/* Per-file drilldown */}
-        <section className="rounded-lg bg-gray-800 p-6">
+        <Card padding="lg">
           <h2 className="text-lg font-semibold mb-4">View Individual Sites</h2>
           <div className="space-y-2">
             {batch.map((entry) => (
-              <div key={entry.filename} className="flex items-center justify-between rounded-md bg-gray-700 px-4 py-3">
+              <div key={entry.filename} className="flex items-center justify-between rounded-(--radius-control) bg-gray-700 px-4 py-3">
                 <span className="truncate">{entry.filename}</span>
                 <div className="flex gap-2 shrink-0 ml-3">
-                  <button
-                    onClick={() => viewSite(entry, 'globe')}
-                    className="flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-sm hover:bg-blue-500"
-                  >
-                    <FiGlobe /> Globe
-                  </button>
-                  <button
-                    onClick={() => viewSite(entry, 'report')}
-                    className="flex items-center gap-1 rounded-md bg-gray-600 px-3 py-1.5 text-sm hover:bg-gray-500"
-                  >
-                    <FiBarChart2 /> Report
-                  </button>
+                  <Button size="sm" icon={<FiGlobe />} onClick={() => viewSite(entry, 'globe')}>
+                    Globe
+                  </Button>
+                  <Button size="sm" variant="secondary" icon={<FiBarChart2 />} onClick={() => viewSite(entry, 'report')}>
+                    Report
+                  </Button>
                 </div>
               </div>
             ))}
           </div>
-        </section>
+        </Card>
       </div>
     </div>
   );

@@ -3,7 +3,11 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { FiBarChart2, FiAlertTriangle, FiChevronDown, FiMap } from "react-icons/fi";
+import { FiBarChart2, FiAlertTriangle, FiMap } from "react-icons/fi";
+import Card from '@/components/ui/Card';
+import Badge, { confidenceTone } from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
+import { Select } from '@/components/ui/Input';
 
 const Globe = dynamic(() => import("react-globe.gl"), { ssr: false });
 
@@ -17,7 +21,7 @@ const generateSpeciesConnections = (speciesData: { species: string; locations: {
     for (let j = i + 1; j < hotspots.length; j++) {
       const start = hotspots[i];
       const end = hotspots[j];
-      
+
       const distance = Math.sqrt(Math.pow(start.lat - end.lat, 2) + Math.pow(start.lng - end.lng, 2));
       const similarity = Math.max(0.1, 1 - distance / 180);
 
@@ -67,7 +71,7 @@ export default function GlobePage() {
           const locations = Array.isArray(profile.coordinates)
             ? profile.coordinates.map((coords: [number, number]) => ({ lat: coords[0], lng: coords[1] }))
             : [];
-            
+
           return {
             species: profile.scientific_name,
             locations: locations,
@@ -112,7 +116,7 @@ export default function GlobePage() {
   }, [selectedSpecies, allGeoData]);
 
   const selectedSpeciesData = allGeoData.find(s => s.species === selectedSpecies);
-  
+
   // --- Render Logic ---
   if (isLoading) {
     return (
@@ -125,55 +129,38 @@ export default function GlobePage() {
   if (error) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-gray-900 text-white p-8 text-center">
-        <FiAlertTriangle size={48} className="text-red-500 mb-4" />
-        <h1 className="text-2xl font-semibold text-red-400">An Error Occurred</h1>
+        <FiAlertTriangle size={48} className="text-danger-500 mb-4" />
+        <h1 className="text-2xl font-semibold text-danger-400">An Error Occurred</h1>
         <p className="text-gray-400 mt-2 max-w-md">{error}</p>
-        <a href="/upload" className="mt-6 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-500">
+        <Button href="/upload" className="mt-6">
           Go to Upload Page
-        </a>
+        </Button>
       </div>
     );
   }
 
   return (
     <div className="relative w-full h-screen bg-black">
-      <div className="absolute top-4 left-4 z-10 rounded-md bg-black/50 p-4 text-white backdrop-blur-sm max-w-sm">
+      <Card padding="lg" className="animate-fade-in absolute top-4 left-4 z-10 bg-black/50 backdrop-blur-sm max-w-sm border-white/10">
         <h1 className="text-xl font-bold">Species Distribution Analysis</h1>
 
         <div className="mt-4">
-          <label htmlFor="species-select" className="block text-sm font-medium text-gray-300">
-            Displaying Hotspots For
-          </label>
-          <div className="relative mt-1">
-            <select
-              id="species-select"
-              value={selectedSpecies}
-              onChange={(e) => setSelectedSpecies(e.target.value)}
-              className="w-full appearance-none rounded-md border-gray-600 bg-gray-800/80 py-2 pl-3 pr-10 text-base focus:border-cyan-500 focus:outline-none focus:ring-cyan-500 sm:text-sm"
-            >
-              {allGeoData.map(s => (
-                <option key={s.species}>{s.species}</option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
-              <FiChevronDown className="h-5 w-5 text-gray-400" />
-            </div>
-          </div>
+          <Select
+            label="Displaying Hotspots For"
+            value={selectedSpecies}
+            onChange={(e) => setSelectedSpecies(e.target.value)}
+          >
+            {allGeoData.map(s => (
+              <option key={s.species}>{s.species}</option>
+            ))}
+          </Select>
         </div>
 
         {selectedSpeciesData && (
           <div className="mt-3 flex items-center justify-between text-xs">
-            <span
-              className={`rounded-full px-2 py-1 font-semibold ${
-                selectedSpeciesData.confidence >= 0.7
-                  ? 'bg-green-500/20 text-green-300'
-                  : selectedSpeciesData.confidence >= 0.4
-                  ? 'bg-yellow-500/20 text-yellow-300'
-                  : 'bg-red-500/20 text-red-300'
-              }`}
-            >
+            <Badge tone={confidenceTone(selectedSpeciesData.confidence)}>
               {Math.round(selectedSpeciesData.confidence * 100)}% confidence
-            </span>
+            </Badge>
             <span className="text-gray-400">
               {selectedSpeciesData.coordinateSource === 'gbif_occurrence_data'
                 ? 'Real GBIF occurrence data'
@@ -184,19 +171,13 @@ export default function GlobePage() {
           </div>
         )}
 
-        <button
-          onClick={() => router.push('/report')}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-md bg-blue-600/80 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500/80"
-        >
-          <FiBarChart2 /> View Analysis Insights
-        </button>
-        <button
-          onClick={() => router.push('/explore')}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-md bg-gray-700/80 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-600/80"
-        >
-          <FiMap /> View as 2D Map
-        </button>
-      </div>
+        <Button onClick={() => router.push('/report')} icon={<FiBarChart2 />} fullWidth className="mt-4">
+          View Analysis Insights
+        </Button>
+        <Button onClick={() => router.push('/explore')} icon={<FiMap />} variant="secondary" fullWidth className="mt-2">
+          View as 2D Map
+        </Button>
+      </Card>
 
       <Globe
         ref={globeRef}

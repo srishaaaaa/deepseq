@@ -2,27 +2,20 @@
 
 import React, { useState, useRef, useEffect, ChangeEvent, DragEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
   FiUploadCloud,
   FiFileText,
   FiX,
   FiArrowLeft,
-  FiHome,
-  FiInfo,
-  FiHelpCircle,
-  FiClock,
-  FiGrid,
-  FiBarChart2,
-  FiDatabase,
-  FiMap,
-  FiSettings,
-  FiLogOut,
   FiLoader,
   FiCheckCircle,
   FiAlertCircle,
 } from 'react-icons/fi';
 import { isLoggedIn, saveAnalysis, logout, getCurrentUser, getUsername } from '@/lib/api';
+import AppNavbar from '@/components/nav/AppNavbar';
+import Card from '@/components/ui/Card';
+import Button from '@/components/ui/Button';
+import Badge from '@/components/ui/Badge';
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB, matches backend limit
 const ALLOWED_EXTENSIONS = ['.fasta', '.fastq', '.fa', '.fna'];
@@ -154,54 +147,17 @@ export default function UploadPage() {
         <div className="absolute inset-0 bg-black opacity-60"></div>
       </div>
 
-      <header className="relative z-10 bg-blue-900/80 backdrop-blur-sm shadow-lg">
-        <nav className="container mx-auto flex items-center justify-between p-4">
-          <Link href="/" className="flex items-center space-x-2">
-            <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.592 1M12 8c-.112 0-.224.016-.335.035M2.004 15.197a4.5 4.5 0 011.026-.06C6.11 14.885 8.761 14 12 14c3.239 0 5.89.884 8.97.944a4.5 4.5 0 011.026.06l-.412 1.633a9.75 9.75 0 01-18.128 0l-.412-1.633zM12 21c-3.132 0-6.104-.633-8.875-1.761M12 21c3.132 0 6.104-.633 8.875-1.761M12 21v-3"></path></svg>
-            <span className="text-xl font-bold">DEEPSEQ</span>
-          </Link>
-          <div className="flex space-x-6">
-            <Link href="/" className="flex items-center hover:text-blue-200">
-                <FiHome className="mr-1"/>Home
-            </Link>
-            <Link href="/about" className="flex items-center hover:text-blue-200">
-                <FiInfo className="mr-1"/>About us
-            </Link>
-            <Link href="/help" className="flex items-center hover:text-blue-200">
-                <FiHelpCircle className="mr-1"/>Help
-            </Link>
-            <Link href="/history" className="flex items-center hover:text-blue-200">
-                <FiClock className="mr-1"/>History
-            </Link>
-            <Link href="/dashboard" className="flex items-center hover:text-blue-200">
-                <FiGrid className="mr-1"/>Dashboard
-            </Link>
-            <Link href="/analytics" className="flex items-center hover:text-blue-200">
-                <FiBarChart2 className="mr-1"/>Analytics
-            </Link>
-            <Link href="/species" className="flex items-center hover:text-blue-200">
-                <FiDatabase className="mr-1"/>Species
-            </Link>
-            <Link href="/explore" className="flex items-center hover:text-blue-200">
-                <FiMap className="mr-1"/>Explore
-            </Link>
-            <Link href="/settings" className="flex items-center hover:text-blue-200">
-                <FiSettings className="mr-1"/>Settings
-            </Link>
-            {username && <span className="flex items-center text-blue-200 text-sm">Hi, {username}</span>}
-            <button onClick={handleLogout} className="flex items-center hover:text-red-300">
-                <FiLogOut className="mr-1"/>Logout
-            </button>
-          </div>
-        </nav>
-      </header>
+      <AppNavbar username={username} onLogout={handleLogout} />
 
-      <button onClick={() => router.back()} className="absolute top-24 left-8 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition hover:bg-black/75">
+      <button
+        onClick={() => router.back()}
+        className="absolute top-24 left-8 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+      >
           <FiArrowLeft size={20} />
       </button>
 
       <main className="relative z-10 flex items-center justify-center min-h-[calc(100vh-64px)] p-4">
-        <div className="w-full max-w-xl rounded-lg bg-blue-900/80 p-8 text-white shadow-2xl backdrop-blur-md">
+        <Card padding="lg" className="w-full max-w-xl bg-brand-900/80 backdrop-blur-md animate-fade-in">
           <h2 className="mb-2 text-xl font-bold text-center">File Upload</h2>
           <p className="mb-6 text-center text-sm text-gray-300">
             Upload one file, or several to compare biodiversity across sites/timepoints.
@@ -211,8 +167,8 @@ export default function UploadPage() {
 
           <div
             onClick={handleDropZoneClick} onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave}
-            className={`flex flex-col items-center justify-center rounded-md border-2 border-dashed bg-white/10 p-10 text-center transition-colors cursor-pointer ${
-              isDragging ? 'border-blue-300 bg-white/20' : 'border-gray-400'
+            className={`flex flex-col items-center justify-center rounded-(--radius-control) border-2 border-dashed bg-white/10 p-10 text-center transition-colors cursor-pointer ${
+              isDragging ? 'border-brand-300 bg-white/20' : 'border-gray-400'
             }`}
           >
             <div className="flex flex-col items-center text-gray-300">
@@ -224,18 +180,18 @@ export default function UploadPage() {
           {queue.length > 0 && (
             <div className="mt-4 space-y-2 max-h-56 overflow-y-auto">
               {queue.map((q, i) => (
-                <div key={i} className="flex items-center justify-between rounded-md bg-white/10 px-3 py-2 text-sm">
+                <div key={i} className="animate-slide-up flex items-center justify-between rounded-(--radius-control) bg-white/10 px-3 py-2 text-sm">
                   <div className="flex items-center gap-2 min-w-0">
                     <FiFileText className="shrink-0" />
                     <span className="truncate">{q.file.name}</span>
                     <span className="text-gray-400 shrink-0">({(q.file.size / 1024).toFixed(1)} KB)</span>
                   </div>
                   <div className="flex items-center gap-2 shrink-0 ml-2">
-                    {q.status === 'analyzing' && <FiLoader className="animate-spin text-blue-300" />}
-                    {q.status === 'done' && <FiCheckCircle className="text-green-400" />}
-                    {q.status === 'error' && <FiAlertCircle className="text-red-400" title={q.error} />}
+                    {q.status === 'analyzing' && <Badge tone="info"><FiLoader className="animate-spin mr-1" />Analyzing</Badge>}
+                    {q.status === 'done' && <Badge tone="success"><FiCheckCircle className="mr-1" />Done</Badge>}
+                    {q.status === 'error' && <Badge tone="danger" title={q.error}><FiAlertCircle className="mr-1" />Error</Badge>}
                     {q.status === 'pending' && (
-                      <button onClick={() => removeFile(i)} className="text-red-300 hover:text-red-200">
+                      <button onClick={() => removeFile(i)} className="text-danger-400/80 hover:text-danger-400 transition-colors" aria-label="Remove file">
                         <FiX />
                       </button>
                     )}
@@ -243,7 +199,7 @@ export default function UploadPage() {
                 </div>
               ))}
               {queue.some((q) => q.status === 'error') && (
-                <p className="text-xs text-red-300">
+                <p className="text-xs text-danger-400">
                   Some files can't be analyzed and will be skipped: {queue.filter((q) => q.status === 'error').map((q) => q.error).join(' / ')}
                 </p>
               )}
@@ -256,26 +212,24 @@ export default function UploadPage() {
 
           <div className="mt-6 text-center text-sm text-gray-300">
             If you do not have a file you can use the sample below:
-            <a href="/sample.fasta" download className="ml-2 inline-block rounded-md bg-gray-600/50 px-3 py-1 font-semibold text-white hover:bg-gray-500/50">
+            <a href="/sample.fasta" download className="ml-2 inline-block rounded-(--radius-control) bg-gray-600/50 px-3 py-1 font-semibold text-white transition-colors hover:bg-gray-500/50">
               Download Sample Template
             </a>
           </div>
 
-          {error && <p className="mt-4 text-center text-sm text-red-400">{error}</p>}
+          {error && <p className="mt-4 text-center text-sm text-danger-400">{error}</p>}
 
           <div className="mt-8 flex justify-end space-x-4">
-            <button onClick={() => router.back()} className="rounded-md bg-gray-600/50 px-6 py-2 font-semibold transition hover:bg-gray-500/50">
+            <Button variant="secondary" onClick={() => router.back()}>
               Cancel
-            </button>
-            <button
-              onClick={handleContinue} disabled={validFiles.length === 0 || isLoading}
-              className="flex items-center justify-center rounded-md bg-blue-600 px-6 py-2 font-semibold transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-gray-400"
+            </Button>
+            <Button
+              onClick={handleContinue} disabled={validFiles.length === 0 || isLoading} loading={isLoading}
             >
-              {isLoading && <FiLoader className="animate-spin mr-2" />}
               {isLoading ? 'Analyzing...' : validFiles.length > 1 ? `Analyze ${validFiles.length} Files` : 'Continue'}
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       </main>
     </div>
   );

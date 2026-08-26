@@ -1,4 +1,16 @@
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
+
+const NOT_CONFIGURED_MESSAGE =
+  'Supabase is not configured for this deployment. Add NEXT_PUBLIC_SUPABASE_URL ' +
+  'and NEXT_PUBLIC_SUPABASE_ANON_KEY to your environment variables and redeploy.';
+
+/** Throws a readable error instead of letting supabase-js fail against the
+ * placeholder URL with an opaque "Failed to fetch". */
+function requireSupabase() {
+  if (!isSupabaseConfigured) throw new Error(NOT_CONFIGURED_MESSAGE);
+}
+
+export { isSupabaseConfigured };
 
 // --- Auth ---------------------------------------------------------------
 // Supabase Auth handles accounts, sessions, and password storage. The
@@ -6,6 +18,7 @@ import { supabase } from './supabase';
 // under a supabase.auth.* key) — we don't need to manage tokens ourselves.
 
 export async function signup(username: string, email: string, password: string) {
+  requireSupabase();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -16,6 +29,7 @@ export async function signup(username: string, email: string, password: string) 
 }
 
 export async function login(email: string, password: string) {
+  requireSupabase();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw new Error(error.message);
   return data;
@@ -27,11 +41,13 @@ export async function logout() {
 }
 
 export async function getCurrentUser() {
+  if (!isSupabaseConfigured) return null;
   const { data } = await supabase.auth.getUser();
   return data.user ?? null;
 }
 
 export async function isLoggedIn(): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   const { data } = await supabase.auth.getSession();
   return !!data.session;
 }
@@ -41,11 +57,13 @@ export function getUsername(user: { user_metadata?: { username?: string } } | nu
 }
 
 export async function requestPasswordReset(email: string, redirectTo: string) {
+  requireSupabase();
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
   if (error) throw new Error(error.message);
 }
 
 export async function updatePassword(newPassword: string) {
+  requireSupabase();
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) throw new Error(error.message);
 }
@@ -67,8 +85,7 @@ const DEFAULT_SETTINGS: UserSettings = {
 /** Returns the current user's settings, or sensible defaults if they
  * haven't saved any yet (no row created until the first save). */
 export async function fetchSettings(): Promise<UserSettings> {
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user;
+  const user = await getCurrentUser();
   if (!user) return DEFAULT_SETTINGS;
 
   const { data, error } = await supabase
@@ -82,8 +99,8 @@ export async function fetchSettings(): Promise<UserSettings> {
 
 /** Upserts the current user's settings row. */
 export async function saveSettings(settings: UserSettings): Promise<void> {
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user;
+  requireSupabase();
+  const user = await getCurrentUser();
   if (!user) throw new Error('You must be signed in to save settings.');
 
   const { error } = await supabase
@@ -105,8 +122,7 @@ export type HistoryItem = {
 };
 
 export async function saveAnalysis(filename: string, result: any) {
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData.user;
+  const user = await getCurrentUser();
   if (!user) return; // not logged in — skip saving, still let the user see the result
 
   const { error } = await supabase.from('analyses').insert({
@@ -120,6 +136,7 @@ export async function saveAnalysis(filename: string, result: any) {
 }
 
 export async function fetchHistory(): Promise<HistoryItem[]> {
+  requireSupabase();
   const { data, error } = await supabase
     .from('analyses')
     .select('id, filename, uploaded_at, unique_species_identified, total_reads_processed, is_shared')
@@ -157,6 +174,7 @@ export async function setShared(id: string, shared: boolean) {
 /** No auth required -- works for anonymous visitors, gated entirely by RLS
  * on is_shared = true. Returns null if the id doesn't exist or isn't shared. */
 export async function fetchPublicAnalysis(id: string) {
+  requireSupabase();
   const { data, error } = await supabase
     .from('analyses')
     .select('filename, uploaded_at, result_json')
@@ -171,8 +189,22 @@ export async function fetchPublicAnalysis(id: string) {
 // deleted for this user — no manual refetch/polling needed. Call the
 // returned function to unsubscribe (e.g. in a useEffect cleanup).
 export function subscribeToHistory(userId: string, onChange: () => void): () => void {
+  if (!isSupabaseConfigured) return () => {};
+
+  const channelName = `analyses-changes-${userId}`;
+
+  // supabase.channel() hands back an existing channel object if one with
+  // this exact topic is already registered, instead of creating a new one.
+  // If that channel was already subscribed (e.g. a prior mount under React
+  // Strict Mode's dev-only double-invoke, or the same user open in two
+  // tabs), calling .on() on it throws "cannot add `postgres_changes`
+  // callbacks ... after `subscribe()`". Removing any stale registration
+  // first guarantees .channel() always returns a fresh, unsubscribed one.
+  const stale = supabase.getChannels().find((ch) => ch.topic === `realtime:${channelName}`);
+  if (stale) supabase.removeChannel(stale);
+
   const channel = supabase
-    .channel(`analyses-changes-${userId}`)
+    .channel(channelName)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'analyses', filter: `user_id=eq.${userId}` },

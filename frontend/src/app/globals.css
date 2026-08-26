@@ -1,1 +1,86 @@
 @import "tailwindcss";
+
+/*
+|--------------------------------------------------------------------------
+| Design tokens
+|--------------------------------------------------------------------------
+| Additive only -- registers new custom tokens/utilities (bg-brand-700,
+| text-success-400, etc.) without redefining any of Tailwind's built-in
+| scale, so every existing className (bg-gray-900, text-blue-300, ...)
+| keeps rendering exactly as it does today.
+*/
+
+@theme {
+  /* Brand/navy scale, formalizing the app's existing dark navy/blue palette */
+  --color-brand-950: #0a1120;
+  --color-brand-900: #0f1b33;
+  --color-brand-800: #16264a;
+  --color-brand-700: #1e3364;
+  --color-brand-600: #2b4a8f;
+  --color-brand-500: #3b63c4;
+  --color-brand-400: #5c86e8;
+  --color-brand-300: #8fabf0;
+
+  /* Semantic status colors */
+  --color-success-500: #22c55e;
+  --color-success-400: #4ade80;
+  --color-warning-500: #f59e0b;
+  --color-warning-400: #fbbf24;
+  --color-danger-500: #ef4444;
+  --color-danger-400: #f87171;
+  --color-info-500: #3b82f6;
+  --color-info-400: #60a5fa;
+
+  /* Radius scale */
+  --radius-card: 0.75rem;
+  --radius-control: 0.5rem;
+  --radius-pill: 9999px;
+
+  /* Shadow scale for elevation */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-elevated: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+
+  /* Font scale extension */
+  --font-size-display: 2.5rem;
+  --font-size-display--line-height: 1.1;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Motion
+|--------------------------------------------------------------------------
+| Respects prefers-reduced-motion: the animation classes only exist under
+| the "no-preference" media query, and are explicitly neutralized under
+| "reduce" so a user with that OS setting never sees them regardless of
+| where they're applied.
+*/
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-fade-in { animation: fade-in 200ms ease-out both; }
+  .animate-slide-up { animation: slide-up 240ms ease-out both; }
+  .animate-shimmer { animation: shimmer 1.6s linear infinite; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-shimmer {
+    animation: none;
+  }
+}
