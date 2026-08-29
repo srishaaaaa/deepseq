@@ -1,5 +1,6 @@
 "use client";
 
+import { createElement } from 'react';
 import type { HTMLAttributes, ElementType } from 'react';
 
 type Padding = 'sm' | 'md' | 'lg';
@@ -41,9 +42,10 @@ export default function Card({
     .filter(Boolean)
     .join(' ');
 
-  return (
-    <Tag className={classes} {...rest}>
-      {children}
-    </Tag>
-  );
+  // Plain createElement instead of JSX here: with a generic ElementType
+  // tag, TS's JSX overload resolution gets ambiguous about which
+  // intrinsic-element props apply (surfaced once @react-three/fiber's
+  // global JSX augmentation joined the program) and rejects the spread.
+  // createElement's typing is more permissive and behaves identically.
+  return createElement(Tag, { className: classes, ...rest }, children);
 }

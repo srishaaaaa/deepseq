@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { FiFileText, FiLoader, FiTrash2, FiEdit2, FiCheck, FiX, FiShare2, FiCopy } from 'react-icons/fi';
 import {
@@ -23,6 +24,8 @@ import PageHeader from '@/components/ui/PageHeader';
 import LoadingState from '@/components/ui/Spinner';
 import EmptyState from '@/components/ui/EmptyState';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+
+const OceanScene = dynamic(() => import('@/components/ocean/OceanScene'), { ssr: false });
 
 export default function HistoryPage() {
   const router = useRouter();
@@ -158,7 +161,17 @@ export default function HistoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="relative min-h-screen bg-brand-950 text-white">
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-950 via-brand-900 to-brand-950" />
+        <div className="absolute -top-32 right-1/4 h-[26rem] w-[26rem] rounded-full bg-cyan-500/[0.06] blur-[120px]" />
+        <div className="absolute bottom-0 left-0 h-[22rem] w-[22rem] rounded-full bg-teal-500/[0.06] blur-[110px]" />
+      </div>
+      <div className="pointer-events-none fixed inset-0 z-[1] opacity-40">
+        <OceanScene variant="light" fish />
+      </div>
+
+      <div className="relative z-10">
       <AppNavbar username={username} onLogout={handleLogout} />
 
       <div className="p-8">
@@ -263,6 +276,7 @@ export default function HistoryPage() {
             ))}
           </div>
         </div>
+      </div>
       </div>
 
       <ConfirmDialog

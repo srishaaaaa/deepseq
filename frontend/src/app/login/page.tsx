@@ -7,6 +7,9 @@ import { useState, FormEvent } from 'react';
 import { login } from '@/lib/api';
 import { Input } from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import AuthLayout from '@/components/auth/AuthLayout';
+import FormError from '@/components/motion/FormError';
+import { StaggerGroup, StaggerItem } from '@/components/motion/Stagger';
 
 export default function LoginPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -33,83 +36,66 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex h-screen w-screen bg-[#111827]">
-      {/* Left side: Image */}
-      <div
-        className="hidden lg:block lg:w-1/2 bg-cover bg-center"
-        style={{ backgroundImage: "url('/images/two.jpg')" }}
-      ></div>
+    <AuthLayout>
+      <StaggerGroup>
+        <StaggerItem>
+          <p className="mb-2 inline-flex items-center rounded-(--radius-pill) border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-medium tracking-wide text-cyan-200">
+            Welcome back
+          </p>
+          <h1 className="mb-6 text-2xl font-semibold text-white">Log in to your account</h1>
+        </StaggerItem>
 
-      {/* Right side: Login Form */}
-      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-8">
-        <div className="w-full max-w-sm animate-fade-in">
-          {/* Logo at the top */}
-          <div className="mb-10 text-center text-white">
-            <h1 className="text-5xl font-bold">DeepSeq</h1>
-          </div>
+        <StaggerItem>
+          <form className="space-y-5" onSubmit={handleLogin}>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              label="Email"
+              placeholder="you@example.com"
+            />
 
-          {/* Form container */}
-          <div className="rounded-(--radius-card) bg-[#1F2937] p-8 shadow-(--shadow-elevated)">
-            <h2 className="mb-2 text-2xl font-semibold text-white">Login to your account</h2>
-
-            <form className="mt-6 space-y-6" onSubmit={handleLogin}>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                label="Email"
-                placeholder="you@example.com"
-              />
-
-              <div>
-                <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="text-sm font-medium text-gray-300">Password</label>
-                  <Link href="/forgot-password" className="text-sm text-brand-400 hover:text-brand-300 transition-colors">Forgot?</Link>
-                </div>
-                <Input
-                  id="password"
-                  name="password"
-                  type={passwordVisible ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  containerClassName="mt-1"
-                  placeholder="Enter your password"
-                  rightSlot={
-                    <button
-                      type="button"
-                      onClick={() => setPasswordVisible(!passwordVisible)}
-                      aria-label={passwordVisible ? 'Hide password' : 'Show password'}
-                      className="text-gray-400 hover:text-gray-300"
-                    >
-                      {passwordVisible ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
-                    </button>
-                  }
-                />
+            <div>
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="text-sm font-medium text-gray-300">Password</label>
+                <Link href="/forgot-password" className="text-sm text-cyan-300 transition-colors hover:text-cyan-200">Forgot?</Link>
               </div>
+              <Input
+                id="password"
+                name="password"
+                type={passwordVisible ? 'text' : 'password'}
+                autoComplete="current-password"
+                required
+                containerClassName="mt-1"
+                placeholder="Enter your password"
+                rightSlot={
+                  <button
+                    type="button"
+                    onClick={() => setPasswordVisible(!passwordVisible)}
+                    aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+                    className="text-gray-400 hover:text-gray-300"
+                  >
+                    {passwordVisible ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+                  </button>
+                }
+              />
+            </div>
 
-              {error && <p className="text-sm text-danger-400">{error}</p>}
+            <FormError message={error} />
 
-              <Button type="submit" loading={isLoading} fullWidth>
-                {isLoading ? 'Logging in...' : 'Login now'}
-              </Button>
-            </form>
+            <Button type="submit" loading={isLoading} fullWidth className="rounded-(--radius-pill)">
+              {isLoading ? 'Logging in...' : 'Login now'}
+            </Button>
+          </form>
 
-            {/* Sign Up Link */}
-            <p className="mt-6 text-center text-sm text-gray-400">
-              Don't Have An Account?{' '}
-              <Link href="/signup" className="font-medium text-brand-400 hover:text-brand-300 transition-colors">Sign Up</Link>
-            </p>
-          </div>
-
-          {/* Logo at the bottom */}
-          <div className="mt-8 flex justify-end">
-             <svg className="h-6 w-6 text-gray-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.592 1M12 8c-.112 0-.224.016-.335.035M2.004 15.197a4.5 4.5 0 011.026-.06C6.11 14.885 8.761 14 12 14c3.239 0 5.89.884 8.97.944a4.5 4.5 0 011.026.06l-.412 1.633a9.75 9.75 0 01-18.128 0l-.412-1.633zM12 21c-3.132 0-6.104-.633-8.875-1.761M12 21c3.132 0 6.104-.633 8.875-1.761M12 21v-3"></path></svg>
-             <span className="text-md font-bold text-gray-400">DEEPSEQ</span>
-          </div>
-        </div>
-      </div>
-    </div>
+          <p className="mt-6 text-center text-sm text-gray-400">
+            Don&apos;t have an account?{' '}
+            <Link href="/signup" className="font-medium text-cyan-300 transition-colors hover:text-cyan-200">Sign up</Link>
+          </p>
+        </StaggerItem>
+      </StaggerGroup>
+    </AuthLayout>
   );
 }

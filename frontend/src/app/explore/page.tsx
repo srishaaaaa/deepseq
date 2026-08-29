@@ -22,6 +22,8 @@ const MAX_DETAILED_RUNS = 25;
 // (Which is why the type/colors above come from ./types, not from
 // BiodiversityMap itself — a static import of that module would pull leaflet
 // back into the server bundle and undo this.)
+const OceanScene = dynamic(() => import('@/components/ocean/OceanScene'), { ssr: false });
+
 const BiodiversityMap = dynamic(() => import('./BiodiversityMap'), {
   ssr: false,
   loading: () => (
@@ -128,7 +130,16 @@ export default function ExplorePage() {
   const realDataCount = useMemo(() => filtered.filter((o) => o.coordinateSource !== 'simulated').length, [filtered]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
+    <div className="relative min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
+      {/* Extra subdued here (opacity-25, no fish) -- this page's real
+          content is an interactive data map, and it shouldn't compete
+          with swimming creatures for attention the way a marketing or
+          settings page can afford to. */}
+      <div className="pointer-events-none fixed inset-0 z-0 opacity-25">
+        <OceanScene variant="light" />
+      </div>
+
+      <div className="relative z-10">
       <AppNavbar username={username} onLogout={handleLogout} />
 
       <div className="p-6 md:p-8">
@@ -265,6 +276,7 @@ export default function ExplorePage() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

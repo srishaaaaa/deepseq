@@ -7,6 +7,7 @@ import { updatePassword } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { Input } from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
+import AuthLayout from '@/components/auth/AuthLayout';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -69,67 +70,67 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-[#111827] text-white">
-      <div className="w-full max-w-sm rounded-(--radius-card) bg-[#1F2937] p-8 shadow-(--shadow-elevated) animate-fade-in">
-        {done ? (
-          <div className="text-center animate-fade-in">
-            <FiCheckCircle className="mx-auto mb-4 h-12 w-12 text-success-400" />
-            <h1 className="text-2xl font-semibold mb-2">Password updated</h1>
-            <p className="text-gray-400">Redirecting you now...</p>
-          </div>
-        ) : invalidLink && !ready ? (
-          <div className="text-center">
-            <h1 className="text-2xl font-semibold mb-2">Link expired or invalid</h1>
-            <p className="text-gray-400 mb-6">Request a new password reset link and try again.</p>
-            <Button href="/forgot-password">
-              Request new link
+    <AuthLayout>
+      {done ? (
+        <div className="animate-fade-in text-center">
+          <FiCheckCircle className="mx-auto mb-4 h-12 w-12 text-success-400" />
+          <h1 className="mb-2 text-2xl font-semibold">Password updated</h1>
+          <p className="text-gray-400">Redirecting you now...</p>
+        </div>
+      ) : invalidLink && !ready ? (
+        <div className="text-center">
+          <h1 className="mb-2 text-2xl font-semibold">Link expired or invalid</h1>
+          <p className="mb-6 text-gray-400">Request a new password reset link and try again.</p>
+          <Button href="/forgot-password" className="rounded-(--radius-pill)">
+            Request new link
+          </Button>
+        </div>
+      ) : !ready ? (
+        <div className="flex flex-col items-center py-8">
+          <FiLoader className="mb-3 h-8 w-8 animate-spin text-cyan-300" />
+          <p className="text-gray-400">Verifying reset link...</p>
+        </div>
+      ) : (
+        <>
+          <h1 className="mb-6 text-2xl font-semibold text-center text-white">Set a new password</h1>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              id="password"
+              type={passwordVisible ? 'text' : 'password'}
+              autoComplete="new-password"
+              required
+              label="New Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              rightSlot={
+                <button
+                  type="button"
+                  onClick={() => setPasswordVisible(!passwordVisible)}
+                  aria-label={passwordVisible ? 'Hide password' : 'Show password'}
+                  className="text-gray-400 hover:text-gray-300"
+                >
+                  {passwordVisible ? <FiEyeOff /> : <FiEye />}
+                </button>
+              }
+            />
+            <Input
+              id="confirm-password"
+              type={passwordVisible ? 'text' : 'password'}
+              autoComplete="new-password"
+              required
+              label="Confirm New Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+
+            {error && <p className="text-sm text-danger-400">{error}</p>}
+
+            <Button type="submit" loading={isLoading} fullWidth className="rounded-(--radius-pill)">
+              {isLoading ? 'Updating...' : 'Update password'}
             </Button>
-          </div>
-        ) : !ready ? (
-          <div className="flex flex-col items-center py-8">
-            <FiLoader className="animate-spin h-8 w-8 mb-3 text-brand-400" />
-            <p className="text-gray-400">Verifying reset link...</p>
-          </div>
-        ) : (
-          <>
-            <h1 className="text-2xl font-semibold mb-6 text-center">Set a new password</h1>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                id="password"
-                type={passwordVisible ? 'text' : 'password'}
-                required
-                label="New Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                rightSlot={
-                  <button
-                    type="button"
-                    onClick={() => setPasswordVisible(!passwordVisible)}
-                    aria-label={passwordVisible ? 'Hide password' : 'Show password'}
-                    className="text-gray-400 hover:text-gray-300"
-                  >
-                    {passwordVisible ? <FiEyeOff /> : <FiEye />}
-                  </button>
-                }
-              />
-              <Input
-                id="confirm-password"
-                type={passwordVisible ? 'text' : 'password'}
-                required
-                label="Confirm New Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-
-              {error && <p className="text-sm text-danger-400">{error}</p>}
-
-              <Button type="submit" loading={isLoading} fullWidth>
-                {isLoading ? 'Updating...' : 'Update password'}
-              </Button>
-            </form>
-          </>
-        )}
-      </div>
-    </div>
+          </form>
+        </>
+      )}
+    </AuthLayout>
   );
 }

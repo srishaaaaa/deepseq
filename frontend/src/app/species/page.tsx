@@ -1,10 +1,13 @@
 "use client";
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { FiArrowLeft, FiDatabase, FiMapPin, FiHash } from 'react-icons/fi';
 import Card from '@/components/ui/Card';
 import PageHeader from '@/components/ui/PageHeader';
 import Badge from '@/components/ui/Badge';
+
+const OceanScene = dynamic(() => import('@/components/ocean/OceanScene'), { ssr: false });
 
 // Mirrors backend/main.py's REFERENCE_DB. Kept in sync manually for now —
 // if the backend gets a real endpoint to list its reference set, swap this
@@ -137,8 +140,17 @@ const CLASSIFICATION_TONE: Record<string, 'success' | 'info' | 'warning' | 'dang
 
 export default function SpeciesLibraryPage() {
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-8">
-      <div className="max-w-5xl mx-auto animate-fade-in">
+    <div className="relative min-h-screen bg-brand-950 text-white p-8">
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-950 via-brand-900 to-brand-950" />
+        <div className="absolute -top-32 left-1/4 h-[26rem] w-[26rem] rounded-full bg-cyan-500/[0.06] blur-[120px]" />
+        <div className="absolute bottom-0 right-0 h-[22rem] w-[22rem] rounded-full bg-teal-500/[0.06] blur-[110px]" />
+      </div>
+      <div className="pointer-events-none fixed inset-0 z-[1] opacity-40">
+        <OceanScene variant="light" fish />
+      </div>
+
+      <div className="relative z-10 max-w-5xl mx-auto animate-fade-in">
         <Link href="/upload" className="inline-flex items-center text-brand-300 hover:text-brand-200 transition-colors mb-6">
           <FiArrowLeft className="mr-2" /> Back to Upload
         </Link>

@@ -16,7 +16,10 @@ import {
   FiLogOut,
   FiMenu,
   FiX,
+  FiSun,
+  FiMoon,
 } from 'react-icons/fi';
+import { useTheme } from '@/components/theme/ThemeProvider';
 
 type NavLink = { href: string; label: string; icon: React.ReactElement };
 
@@ -59,6 +62,7 @@ export type AppNavbarProps = {
 export default function AppNavbar({ username, onLogout }: AppNavbarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="relative z-30 bg-brand-900/80 backdrop-blur-sm shadow-lg">
@@ -88,6 +92,14 @@ export default function AppNavbar({ username, onLogout }: AppNavbarProps) {
             );
           })}
           {username && <span className="text-brand-200 text-sm">Hi, {username}</span>}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center text-slate-200 hover:text-brand-200 transition-colors"
+            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          >
+            {theme === 'dark' ? <FiSun size={16} /> : <FiMoon size={16} />}
+          </button>
           <button
             onClick={() => onLogout()}
             className="flex items-center text-slate-200 hover:text-danger-400 transition-colors"
@@ -129,6 +141,13 @@ export default function AppNavbar({ username, onLogout }: AppNavbarProps) {
                 </Link>
               );
             })}
+            <button
+              onClick={toggleTheme}
+              className="flex items-center rounded-(--radius-control) px-3 py-2.5 text-sm text-slate-200 hover:bg-white/5 transition-colors"
+            >
+              <span className="mr-2.5">{theme === 'dark' ? <FiSun /> : <FiMoon />}</span>
+              {theme === 'dark' ? 'Light theme' : 'Dark theme'}
+            </button>
             <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between px-3">
               {username && <span className="text-brand-200 text-sm">Hi, {username}</span>}
               <button

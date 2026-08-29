@@ -20,6 +20,7 @@
   --color-brand-500: #3b63c4;
   --color-brand-400: #5c86e8;
   --color-brand-300: #8fabf0;
+  --color-brand-200: #b9cef6;
 
   /* Semantic status colors */
   --color-success-500: #22c55e;
@@ -48,6 +49,70 @@
 
 /*
 |--------------------------------------------------------------------------
+| Theming (dark default + light)
+|--------------------------------------------------------------------------
+| The UI is authored dark-first with hard-coded utilities (text-white,
+| bg-gray-800, bg-brand-950, ...). Rather than touch every page, light mode
+| is a runtime *re-point* of the CSS color variables those utilities
+| already compile down to (`color: var(--color-white)` etc). Toggling
+| `data-theme` on <html> (see components/theme/ThemeProvider.tsx) swaps the
+| whole palette. Accent hues (brand-500/400, danger, success) are kept so
+| primary actions stay on-brand; only the surface + text ramps flip.
+*/
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-brand-950);
+  color: var(--color-white);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Text: "white" body copy becomes near-black ink */
+  --color-white: #0b1220;
+
+  /* Navbar / ghost-button text ramp */
+  --color-slate-100: #0f172a;
+  --color-slate-200: #1e293b;
+  --color-slate-300: #334155;
+
+  /* Neutral ramp: 300-500 are text, 600-950 are surfaces/borders */
+  --color-gray-300: #334155;
+  --color-gray-400: #52607a;
+  --color-gray-500: #5b6b86;
+  --color-gray-600: #d5dde8;
+  --color-gray-700: #e9eef5;
+  --color-gray-800: #ffffff;
+  --color-gray-900: #eef2f7;
+  --color-gray-950: #e6ebf2;
+
+  /* Brand navy scale: dark backgrounds -> pale tints, accents kept */
+  --color-brand-950: #eef2f9;
+  --color-brand-900: #dbe4f3;
+  --color-brand-800: #cdd9ee;
+  --color-brand-700: #b7c6e6;
+  --color-brand-600: #8aa5da;
+  --color-brand-500: #3b63c4;
+  --color-brand-400: #4f78dc;
+  --color-brand-300: #2a4a9e;
+  --color-brand-200: #24397a;
+}
+
+/* Filled action buttons/links keep light text on their accent fill even
+   though `text-white` now resolves to ink. */
+:root[data-theme="light"] :is(a, button).bg-brand-500,
+:root[data-theme="light"] :is(a, button).bg-brand-400,
+:root[data-theme="light"] :is(a, button).bg-danger-500,
+:root[data-theme="light"] :is(a, button).bg-success-500 {
+  color: #ffffff;
+}
+
+/*
+|--------------------------------------------------------------------------
 | Motion
 |--------------------------------------------------------------------------
 | Respects prefers-reduced-motion: the animation classes only exist under
@@ -71,16 +136,66 @@
   100% { background-position: 200% 0; }
 }
 
+/* Hero globe ambiance (components/globe/HeroGlobe.tsx) */
+@keyframes globe-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+@keyframes glint {
+  0%, 100% { opacity: 0; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes hud-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes hud-spin-reverse {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+/* Auth panel DNA helix (components/auth/DnaHelix.tsx) */
+@keyframes dna-spin {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(360deg); }
+}
+
+/* Click ripple feedback (components/motion/useClickRipples.tsx) */
+@keyframes water-ripple {
+  from { transform: scale(1); opacity: 0.7; }
+  to { transform: scale(16); opacity: 0; }
+}
+
+/* Underwater caustics (app/page.tsx ocean backdrop) -- two large soft
+   radial patches drifting slowly and out of phase, standing in for
+   sunlight refracting through a moving water surface. Pure CSS
+   background-position animation, layered under the WebGL creatures. */
+@keyframes caustic-drift-a {
+  0%, 100% { background-position: 10% 20%, 70% 60%; }
+  50% { background-position: 30% 35%, 55% 75%; }
+}
+@keyframes caustic-drift-b {
+  0%, 100% { background-position: 80% 15%, 20% 70%; }
+  50% { background-position: 60% 30%, 40% 55%; }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .animate-fade-in { animation: fade-in 200ms ease-out both; }
   .animate-slide-up { animation: slide-up 240ms ease-out both; }
   .animate-shimmer { animation: shimmer 1.6s linear infinite; }
+  .animate-caustic-a { animation: caustic-drift-a 22s ease-in-out infinite; }
+  .animate-caustic-b { animation: caustic-drift-b 28s ease-in-out infinite; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in,
   .animate-slide-up,
-  .animate-shimmer {
+  .animate-shimmer,
+  .animate-caustic-a,
+  .animate-caustic-b {
     animation: none;
   }
 }

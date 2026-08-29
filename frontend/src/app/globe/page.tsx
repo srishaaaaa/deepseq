@@ -30,7 +30,7 @@ const generateSpeciesConnections = (speciesData: { species: string; locations: {
         startLng: start.lng,
         endLat: end.lat,
         endLng: end.lng,
-        color: `rgba(0, 255, 150, ${similarity * 0.7})`,
+        color: `rgba(0, 255, 150, ${similarity * 0.02})`,
         stroke: similarity * 0.6,
       });
     }

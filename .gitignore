@@ -1,14 +1,39 @@
-@"
+# Dependencies
 node_modules/
+
+# Next.js
 .next/
+out/
+build/
+
+# Environment
 .env
 .env.local
 .env.*.local
+!.env.local.example
 
+# Python
 venv/
 backend/venv/
+.venv/
 __pycache__/
 *.py[cod]
 
+# TypeScript / build info
+*.tsbuildinfo
 tsconfig.tsbuildinfo
-"@ | Set-Content .gitignore
+
+# Logs
+*.log
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Uploads
+uploads/
+backend/uploads/
+*.fastq
+*.fq

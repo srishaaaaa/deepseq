@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { FiSettings, FiSave, FiCheck } from 'react-icons/fi';
 import {
   fetchSettings,
@@ -18,6 +19,9 @@ import PageHeader from '@/components/ui/PageHeader';
 import LoadingState from '@/components/ui/Spinner';
 import Button from '@/components/ui/Button';
 import { Range } from '@/components/ui/Input';
+import { useTheme } from '@/components/theme/ThemeProvider';
+
+const OceanScene = dynamic(() => import('@/components/ocean/OceanScene'), { ssr: false });
 
 const EXPORT_FORMATS: { value: UserSettings['default_export_format']; label: string }[] = [
   { value: 'pdf', label: 'PDF Report' },
@@ -27,6 +31,7 @@ const EXPORT_FORMATS: { value: UserSettings['default_export_format']; label: str
 
 export default function SettingsPage() {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const [username, setUsername] = useState<string | null>(null);
   const [settings, setSettings] = useState<UserSettings>({
     confidence_threshold: 0.2,
@@ -49,14 +54,16 @@ export default function SettingsPage() {
       setUsername(getUsername(user));
 
       try {
-        setSettings(await fetchSettings());
+        const fetched = await fetchSettings();
+        setSettings(fetched);
+        setTheme(fetched.theme); // apply the account preference on load
       } catch (err: any) {
         setError(err.message);
       } finally {
         setLoading(false);
       }
     })();
-  }, [router]);
+  }, [router, setTheme]);
 
   const handleLogout = async () => {
     await logout();
@@ -68,7 +75,9 @@ export default function SettingsPage() {
     setError(null);
     setSaved(false);
     try {
-      await saveSettings(settings);
+      // `theme` is the live source of truth (it can also be flipped from the
+      // navbar toggle while this page is open).
+      await saveSettings({ ...settings, theme });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err: any) {
@@ -79,7 +88,17 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="relative min-h-screen bg-brand-950 text-white">
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-950 via-brand-900 to-brand-950" />
+        <div className="absolute -top-32 left-1/4 h-[24rem] w-[24rem] rounded-full bg-cyan-500/[0.06] blur-[120px]" />
+        <div className="absolute bottom-0 right-0 h-[22rem] w-[22rem] rounded-full bg-violet-500/[0.06] blur-[110px]" />
+      </div>
+      <div className="pointer-events-none fixed inset-0 z-[1] opacity-40">
+        <OceanScene variant="light" fish />
+      </div>
+
+      <div className="relative z-10">
       <AppNavbar username={username} onLogout={handleLogout} />
 
       <div className="p-8">
@@ -141,16 +160,19 @@ export default function SettingsPage() {
               <Card padding="lg">
                 <h2 className="font-semibold mb-1">Theme</h2>
                 <p className="text-sm text-gray-500 mb-4">
-                  Saved to your account. The interface is dark-first today — light mode is stored
-                  as a preference for a future release.
+                  Switches the interface between dark and light instantly. The choice is remembered
+                  on this device and saved to your account when you press Save.
                 </p>
                 <div className="flex gap-3">
                   {(['dark', 'light'] as const).map((t) => (
                     <button
                       key={t}
-                      onClick={() => setSettings((s) => ({ ...s, theme: t }))}
+                      onClick={() => {
+                        setTheme(t);
+                        setSettings((s) => ({ ...s, theme: t }));
+                      }}
                       className={`px-4 py-2 rounded-(--radius-control) text-sm border capitalize transition-colors ${
-                        settings.theme === t
+                        theme === t
                           ? 'bg-brand-500 border-brand-400'
                           : 'bg-gray-700 border-gray-600 hover:bg-gray-600'
                       }`}
@@ -169,6 +191,7 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

@@ -2,89 +2,62 @@
 
 import { useState } from 'react';
 
-// Define a type for the expected result structure for better code quality
-type AnalysisData = {
-  analysis: any;
-  geo: any;
-};
-
+/** Minimal dev utility for hitting /api/analyze directly, bypassing the
+ * real /upload flow's UI/auth/history-saving -- useful for checking the
+ * backend's raw JSON response while iterating on it.
+ *
+ * Note: this file was temporarily replaced with a throwaway diagnostic
+ * (an isolated GLTF-render test, used to debug the ocean-scene creature
+ * materials) and has been rebuilt here to its apparent original purpose.
+ * The exact prior content wasn't recoverable (not under git tracking) --
+ * flagging that plainly rather than pretending this matches byte-for-byte. */
 export default function TestApiPage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<AnalysisData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [response, setResponse] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleTestClick = async () => {
-    setIsLoading(true);
-    setResult(null);
-    setError(null);
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const file = (event.currentTarget.elements.namedItem('file') as HTMLInputElement)?.files?.[0];
+    if (!file) return;
 
+    setLoading(true);
+    setStatus(null);
+    setResponse(null);
     try {
-      // Create sample FASTA data in memory instead of reading a file
-      const fastaContent = `>seq1_Orca_DNA
-GATTACATTAGGATTACATTAC
->seq2_Tuna_DNA
-AGCTAGCTAGCTAGCTAGCT
->seq3_Unknown_Creature
-CCCCCCCCCCCCCCCCCCCC`;
-      
-      const blob = new Blob([fastaContent], { type: 'text/plain' });
-      const file = new File([blob], "sample_sequences.fasta", { type: "text/plain" });
-
-      // Create a FormData object to send the file
       const formData = new FormData();
       formData.append('file', file);
-
-      // Call your own Next.js API route
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw new Error(responseData.error || 'An API error occurred.');
+      const res = await fetch('/api/analyze', { method: 'POST', body: formData });
+      const text = await res.text();
+      setStatus(`${res.status} ${res.statusText}`);
+      try {
+        setResponse(JSON.stringify(JSON.parse(text), null, 2));
+      } catch {
+        setResponse(text);
       }
-
-      setResult(responseData);
-
     } catch (err: any) {
-      setError(err.message);
-      console.error(err);
+      setStatus('Request failed');
+      setResponse(err?.message ?? String(err));
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>API Test Page</h1>
-      <p>Click the button below to send a sample FASTA file to your API endpoint.</p>
-      
-      <button 
-        onClick={handleTestClick} 
-        disabled={isLoading}
-        style={{ padding: '0.75rem 1.5rem', fontSize: '1rem', cursor: 'pointer', marginTop: '1rem' }}
-      >
-        {isLoading ? 'Testing API...' : 'Run API Test'}
-      </button>
-
-      {error && (
-        <div style={{ marginTop: '1rem', color: 'red' }}>
-          <h2>Error:</h2>
-          <pre style={{ background: '#ffeeee', padding: '1rem', borderRadius: '5px' }}>
-            {error}
-          </pre>
-        </div>
-      )}
-
-      {result && (
-        <div style={{ marginTop: '1rem' }}>
-          <h2>✅ Success! API Response:</h2>
-          <pre style={{ background: '#f0f0f0', padding: '1rem', borderRadius: '5px', whiteSpace: 'pre-wrap' }}>
-            {JSON.stringify(result, null, 2)}
-          </pre>
-        </div>
+    <div style={{ padding: 24, fontFamily: 'monospace', color: '#e5e7eb', background: '#0f172a', minHeight: '100vh' }}>
+      <h1>/api/analyze -- raw test</h1>
+      <p style={{ color: '#94a3b8' }}>Uploads a file straight to the backend, no auth/history/UI in the way.</p>
+      <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
+        <input type="file" name="file" accept=".fasta,.fastq,.fa,.fna" />
+        <button type="submit" disabled={loading} style={{ marginLeft: 12 }}>
+          {loading ? 'Sending...' : 'Send'}
+        </button>
+      </form>
+      {status && <p style={{ marginTop: 16 }}>Status: {status}</p>}
+      {response && (
+        <pre style={{ marginTop: 8, whiteSpace: 'pre-wrap', background: '#1e293b', padding: 12, borderRadius: 8 }}>
+          {response}
+        </pre>
       )}
     </div>
   );

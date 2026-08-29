@@ -1,20 +1,24 @@
 "use client";
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { FiHome, FiInfo, FiHelpCircle, FiArrowLeft } from 'react-icons/fi';
+
+const OceanScene = dynamic(() => import('@/components/ocean/OceanScene'), { ssr: false });
 
 export default function AboutPage() {
   const router = useRouter();
 
   return (
-    <div className="relative min-h-screen bg-gray-900 text-white overflow-hidden">
-      {/* Background Image */}
-      <div
-        className="absolute inset-0 z-0 bg-cover bg-center"
-        style={{ backgroundImage: "url('/images/one.jpg')" }} // Assuming the same background image
-      >
-        <div className="absolute inset-0 bg-black opacity-70"></div>
+    <div className="relative min-h-screen bg-brand-950 text-white overflow-hidden">
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-950 via-brand-900 to-brand-950" />
+        <div className="absolute -top-32 left-1/3 h-[26rem] w-[26rem] rounded-full bg-cyan-500/[0.06] blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 h-[22rem] w-[22rem] rounded-full bg-violet-500/[0.06] blur-[110px]" />
+      </div>
+      <div className="pointer-events-none fixed inset-0 z-[1] opacity-50">
+        <OceanScene variant="light" fish />
       </div>
 
       {/* Header */}
@@ -66,6 +70,32 @@ export default function AboutPage() {
 
             <p className="text-gray-300 leading-relaxed mt-6">
               Our oceans hold countless mysteries, with many species still hidden from science. By combining AI, genomics, and visualization, DeepSeq provides researchers and conservationists with powerful tools to track marine life, monitor ecosystems, and accelerate the discovery of new biodiversity.
+            </p>
+
+            <h2 className="text-3xl font-bold mt-8 mb-4 border-b-2 border-cyan-400/50 pb-2">
+              Credits
+            </h2>
+            <p className="text-sm text-gray-400 leading-relaxed">
+              The animated shark and fish models in the homepage ocean scene are
+              adapted from the{' '}
+              <a
+                href="https://github.com/BabylonJS/MeshesLibrary"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-cyan-300 hover:underline"
+              >
+                Babylon.js Meshes Library
+              </a>
+              , licensed{' '}
+              <a
+                href="http://creativecommons.org/licenses/by/4.0/"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-cyan-300 hover:underline"
+              >
+                CC BY 4.0
+              </a>
+              .
             </p>
           </div>
         </div>
