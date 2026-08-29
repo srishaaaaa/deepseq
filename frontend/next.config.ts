@@ -8,6 +8,17 @@ const nextConfig: NextConfig = {
   // explicitly stops the "inferred workspace root may be wrong" warning and
   // keeps output file tracing scoped to this project.
   outputFileTracingRoot: path.join(__dirname),
+
+  experimental: {
+    // Next 15.5's dev-only "Segment Explorer" devtool crashes while
+    // serializing routes that use next/dynamic with ssr:false (home, globe,
+    // explore, ...), producing intermittent 500s and 10-20s dev loads
+    // ("segment-explorer-node.js" + "__webpack_modules__[moduleId] is not a
+    // function" in the terminal). Turning the overlay panel off removes that
+    // code path. Dev-only; no effect on the production build or any app
+    // feature.
+    devtoolSegmentExplorer: false,
+  },
 };
 
 export default nextConfig;
