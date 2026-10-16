@@ -1,259 +1,215 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { AnimatePresence, motion } from 'motion/react';
-import {
-  FiFileText,
-  FiUploadCloud,
-  FiBarChart2,
-  FiDatabase,
-  FiClock,
-  FiActivity,
-  FiMap,
-  FiSettings,
-} from 'react-icons/fi';
-import {
-  fetchHistory,
-  isLoggedIn,
-  logout,
-  getCurrentUser,
-  getUsername,
-  subscribeToHistory,
-  HistoryItem,
-} from '@/lib/api';
-import AppNavbar from '@/components/nav/AppNavbar';
-import Card from '@/components/ui/Card';
-import PageHeader from '@/components/ui/PageHeader';
-import LoadingState from '@/components/ui/Spinner';
-import EmptyState from '@/components/ui/EmptyState';
-import Skeleton from '@/components/ui/Skeleton';
-import Reveal from '@/components/motion/Reveal';
-import CountUp from '@/components/motion/CountUp';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { FiUploadCloud, FiCode, FiBarChart2, FiGlobe, FiFileText, FiArrowRight, FiServer, FiDatabase, FiWifi } from 'react-icons/fi';
+import WorkspaceShell from '@/components/workspace/WorkspaceShell';
+import { LinkButton } from '@/components/ui/Button';
+import CountUp from '@/components/ui/CountUp';
+import DnaSpinner from '@/components/ui/DnaSpinner';
+import { ago, useServiceSignals } from '@/components/ui/ServiceStatus';
+import { fetchHistory, fetchHistoryItem, getCurrentUser, getUsername, type HistoryItem } from '@/lib/api';
+import { loadAnalysisResult, loadSequences, pct, RESULT_KEY, type AnalysisResult } from '@/lib/analysis';
 
-// Same lazy/SSR-disabled pattern as everywhere else the ocean scene
-// appears. "light" variant only -- a couple of jellyfish + drifting
-// particles, no fish school/shark/DNA trail. This is a working dashboard,
-// not the marketing homepage; the 3D here is ambience in the margins,
-// not something competing with the actual data for attention.
-const OceanScene = dynamic(() => import('@/components/ocean/OceanScene'), { ssr: false });
+const ACTIONS = [
+  { href: '/upload', label: 'New analysis', body: 'Upload a FASTA file', icon: FiUploadCloud },
+  { href: '/sequences', label: 'Sequence explorer', body: 'Inspect uploaded reads', icon: FiCode },
+  { href: '/report', label: 'Results', body: 'Classification & abundance', icon: FiBarChart2 },
+  { href: '/globe', label: 'Geographic view', body: 'Detections on the globe', icon: FiGlobe },
+];
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [items, setItems] = useState<HistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryItem[] | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [latest, setLatest] = useState<AnalysisResult | null>(null);
+  const [hasSeqs, setHasSeqs] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const { last, offline } = useServiceSignals();
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
+    setLatest(loadAnalysisResult());
+    setHasSeqs(!!loadSequences());
+    getCurrentUser().then((u) => setUsername(getUsername(u))).catch(() => {});
+    fetchHistory().then(setHistory).catch((e) => { setHistoryError(e.message); setHistory([]); });
+  }, []);
 
-    (async () => {
-      const loggedIn = await isLoggedIn();
-      if (!loggedIn) {
-        router.replace('/login');
-        return;
-      }
-      const user = await getCurrentUser();
-      setUsername(getUsername(user));
-
-      try {
-        const history = await fetchHistory();
-        setItems(history);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-
-      if (user) {
-        unsubscribe = subscribeToHistory(user.id, async () => {
-          try {
-            setItems(await fetchHistory());
-          } catch {
-            /* keep showing the last good state on a transient refresh error */
-          }
-        });
-      }
-    })();
-
-    return () => unsubscribe?.();
-  }, [router]);
-
-  const handleLogout = async () => {
-    await logout();
-    router.push('/login');
+  const openItem = async (id: string) => {
+    setOpeningId(id);
+    try {
+      const result = await fetchHistoryItem(id);
+      localStorage.setItem(RESULT_KEY, JSON.stringify(result));
+      router.push('/report');
+    } catch (err: any) {
+      setHistoryError(err.message);
+      setOpeningId(null);
+    }
   };
 
-  const totalAnalyses = items.length;
-  const totalReads = items.reduce((sum, it) => sum + (it.total_reads_processed || 0), 0);
-  const totalSpeciesCalls = items.reduce((sum, it) => sum + (it.unique_species_identified || 0), 0);
-  const avgSpeciesPerRun = totalAnalyses ? Math.round((totalSpeciesCalls / totalAnalyses) * 10) / 10 : 0;
-  const sharedCount = items.filter((it) => it.is_shared).length;
-  const lastUpload = items[0]?.uploaded_at;
-
-  const stats = [
-    { label: 'Analyses run', value: totalAnalyses, icon: FiFileText },
-    { label: 'Reads processed', value: totalReads, icon: FiActivity, formatter: (n: number) => Math.round(n).toLocaleString() },
-    { label: 'Avg. species / run', value: avgSpeciesPerRun, icon: FiDatabase, formatter: (n: number) => n.toFixed(1) },
-    { label: 'Public share links', value: sharedCount, icon: FiBarChart2 },
-  ];
-
-  const quickLinks = [
-    { href: '/upload', label: 'New Analysis', desc: 'Upload a FASTA/FASTQ file', icon: FiUploadCloud },
-    { href: '/analytics', label: 'Analytics', desc: 'Trends across all your runs', icon: FiBarChart2 },
-    { href: '/species', label: 'Species Library', desc: 'Browse the reference database', icon: FiDatabase },
-    { href: '/explore', label: 'Map Explorer', desc: 'Occurrences across all analyses', icon: FiMap },
-  ];
+  const totalReads = history?.reduce((s, h) => s + (h.total_reads_processed ?? 0), 0) ?? 0;
 
   return (
-    <div className="relative min-h-screen bg-brand-950 text-white">
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-brand-950 via-brand-900 to-brand-950" />
-        <div className="absolute -top-32 right-1/4 h-[28rem] w-[28rem] rounded-full bg-cyan-500/[0.06] blur-[120px]" />
-        <div className="absolute bottom-0 left-0 h-[22rem] w-[22rem] rounded-full bg-violet-500/[0.06] blur-[110px]" />
-      </div>
-      <div className="pointer-events-none fixed inset-0 z-[1] opacity-40">
-        <OceanScene variant="light" fish />
-      </div>
+    <WorkspaceShell title="Overview" subtitle={username ? `Welcome back, ${username}` : 'Your analysis workspace'} requireAuth>
+      <div className="mx-auto max-w-6xl space-y-6">
+        {/* Quick actions */}
+        <section aria-label="Quick actions" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {ACTIONS.map(({ href, label, body, icon: Icon }, i) => (
+            <Link key={href} href={href} className="panel panel-hover group flex items-center gap-4 p-5" style={{ animation: `rise 0.7s ${i * 70}ms var(--ease-abyss) both` }}>
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-biolum/5 text-biolum transition-colors group-hover:bg-biolum/15">
+                <Icon aria-hidden />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-medium">{label}</span>
+                <span className="block truncate text-sm text-mute">{body}</span>
+              </span>
+            </Link>
+          ))}
+        </section>
 
-      <div className="relative z-10">
-        <AppNavbar username={username} onLogout={handleLogout} />
-
-        <div className="p-8">
-          <div className="max-w-5xl mx-auto animate-fade-in">
-            <PageHeader
-              title="Dashboard"
-              subtitle={username ? `Welcome back, ${username} — here's your biodiversity intelligence at a glance.` : undefined}
-            />
-
-            {loading && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <Skeleton key={i} variant="card" />
-                  ))}
-                </div>
-                <LoadingState label="Loading dashboard..." />
-              </div>
-            )}
-
-            {error && <p className="text-danger-400 mb-4">{error}</p>}
-
-            {!loading && (
+        <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+          {/* Latest analysis */}
+          <section className="panel p-6" aria-labelledby="latest-title">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 id="latest-title" className="text-lg font-medium">Latest analysis on this device</h2>
+              {latest && <span className="mono-meta truncate">{latest.file_info.filename}</span>}
+            </div>
+            {latest ? (
               <>
-                {/* Stat cards -- real numbers, animated counting up to their
-                    actual value once (never invented, just eased in). */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                  {stats.map(({ label, value, icon: Icon, formatter }, i) => (
-                    <Reveal key={label} delay={i * 60}>
-                      <Card interactive className="h-full border-white/10 bg-white/[0.03]">
-                        <Icon className="h-6 w-6 text-cyan-300 mb-3" />
-                        <p className="text-2xl font-bold tabular-nums">
-                          <CountUp value={value} formatter={formatter} />
-                        </p>
-                        <p className="text-sm text-gray-400">{label}</p>
-                      </Card>
-                    </Reveal>
+                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  <Mini k="Reads" v={<CountUp value={latest.biodiversity_summary.total_reads_processed} />} />
+                  <Mini k="Taxa" v={<CountUp value={latest.biodiversity_summary.unique_species_identified} />} />
+                  <Mini k="Geo profiles" v={<CountUp value={latest.geo_profiles.length} />} />
+                </div>
+                <ul className="mt-6 space-y-2.5" aria-label="Top taxa by abundance">
+                  {[...latest.biodiversity_summary.abundance_distribution].sort((a, b) => b.count - a.count).slice(0, 4).map((a) => (
+                    <li key={a.species} className="grid grid-cols-[minmax(0,10rem)_1fr_3.5rem] items-center gap-3 text-sm">
+                      <span className="truncate italic text-ink/85">{a.species}</span>
+                      <span className="h-2 rounded-r-[4px] bg-line/50"><span className="block h-2 rounded-r-[4px] bg-biolum" style={{ width: `${a.relative_abundance * 100}%` }} /></span>
+                      <span className="text-right font-mono text-xs text-mute">{pct(a.relative_abundance)}</span>
+                    </li>
                   ))}
+                </ul>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <LinkButton href="/report" variant="secondary" className="!py-2 text-sm">Open results <FiArrowRight aria-hidden /></LinkButton>
+                  <LinkButton href="/globe" variant="ghost" className="text-sm"><FiGlobe aria-hidden /> Globe</LinkButton>
+                  {hasSeqs && <LinkButton href="/sequences" variant="ghost" className="text-sm"><FiCode aria-hidden /> Sequences</LinkButton>}
                 </div>
-
-                {/* Quick links to other modules */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                  {quickLinks.map(({ href, label, desc, icon: Icon }, i) => (
-                    <Reveal key={href} delay={(i + 4) * 60}>
-                      <Link href={href}>
-                        <Card interactive className="flex items-center h-full border-white/10 bg-brand-900/40">
-                          <Icon className="h-6 w-6 text-cyan-300 mr-3 shrink-0" />
-                          <div>
-                            <p className="font-semibold">{label}</p>
-                            <p className="text-sm text-gray-400">{desc}</p>
-                          </div>
-                        </Card>
-                      </Link>
-                    </Reveal>
-                  ))}
-                </div>
-
-                {/* Second row: settings */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                  <Link href="/settings">
-                    <Card interactive className="flex items-center h-full border-white/10 bg-white/[0.03]">
-                      <FiSettings className="h-6 w-6 text-cyan-300 mr-3 shrink-0" />
-                      <div>
-                        <p className="font-semibold">Settings</p>
-                        <p className="text-sm text-gray-400">Confidence threshold, export, theme</p>
-                      </div>
-                    </Card>
-                  </Link>
-                </div>
-
-                {/* Recent activity -- AnimatePresence so a live insert/remove
-                    from subscribeToHistory's realtime subscription animates
-                    smoothly instead of popping. */}
-                <Card padding="lg" className="border-white/10 bg-white/[0.03]">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-semibold flex items-center">
-                      <FiClock className="mr-2 text-cyan-300" /> Recent Activity
-                    </h2>
-                    <Link href="/history" className="text-sm text-cyan-300 hover:text-cyan-200 transition-colors">
-                      View all &rarr;
-                    </Link>
-                  </div>
-
-                  {items.length === 0 ? (
-                    <EmptyState
-                      icon={<FiFileText />}
-                      title="No analyses yet."
-                      action={
-                        <Link href="/upload" className="text-cyan-300 hover:underline">
-                          Upload a file to get started.
-                        </Link>
-                      }
-                    />
-                  ) : (
-                    <div className="space-y-2">
-                      <AnimatePresence initial={false}>
-                        {items.slice(0, 5).map((item) => (
-                          <motion.div
-                            key={item.id}
-                            layout
-                            initial={{ opacity: 0, y: -8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 8 }}
-                            transition={{ duration: 0.25, ease: 'easeOut' }}
-                            className="flex items-center justify-between rounded-(--radius-control) bg-gray-700/50 px-4 py-3"
-                          >
-                            <div className="flex items-center min-w-0">
-                              <FiFileText className="mr-3 h-5 w-5 text-cyan-300 shrink-0" />
-                              <div className="min-w-0">
-                                <p className="font-medium truncate">{item.filename}</p>
-                                <p className="text-xs text-gray-400">
-                                  {new Date(item.uploaded_at).toLocaleString()}
-                                </p>
-                              </div>
-                            </div>
-                            <span className="text-sm text-gray-400 shrink-0 ml-3">
-                              {item.unique_species_identified} species &middot; {item.total_reads_processed} reads
-                            </span>
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </div>
-                  )}
-                  {lastUpload && (
-                    <p className="text-xs text-gray-500 mt-4">
-                      Last analysis: {new Date(lastUpload).toLocaleString()}
-                    </p>
-                  )}
-                </Card>
               </>
+            ) : (
+              <Empty
+                title="No analysis loaded"
+                body="Run your first analysis, or open one from your history to load it here."
+                action={<LinkButton href="/upload" className="!py-2 text-sm">Start an analysis</LinkButton>}
+              />
+            )}
+          </section>
+
+          {/* Connectivity */}
+          <section className="panel p-6" aria-labelledby="svc-title">
+            <h2 id="svc-title" className="text-lg font-medium">Service connectivity</h2>
+            <ul className="mt-5 space-y-3">
+              <Svc icon={FiWifi} name="Your connection" state={offline ? 'warn' : 'ok'} text={offline ? 'Offline' : 'Online'} />
+              <Svc
+                icon={FiServer}
+                name="Analysis service"
+                state={!last ? 'pending' : last.ok ? 'ok' : 'bad'}
+                text={!last ? 'No request yet' : last.ok ? `OK ${ago(last.at)} · ${(last.ms / 1000).toFixed(1)} s` : `Failed ${ago(last.at)}`}
+              />
+              <Svc
+                icon={FiDatabase}
+                name="History database"
+                state={history === null ? 'pending' : historyError ? 'bad' : 'ok'}
+                text={history === null ? 'Checking…' : historyError ? 'Error' : 'Connected'}
+              />
+            </ul>
+            <p className="mt-5 text-xs leading-relaxed text-mute">
+              The analysis status reflects the most recent real request made from this browser.{' '}
+              {last && !last.ok && last.message ? <>Last error: <span className="text-ink">{last.message}</span>. </> : null}
+              Use the <Link href="/test-api" className="text-biolum link-underline">API check</Link> to send a small test file now.
+            </p>
+          </section>
+        </div>
+
+        {/* History */}
+        <section className="panel p-6" aria-labelledby="hist-title">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 id="hist-title" className="text-lg font-medium">Recent analyses</h2>
+            {history && history.length > 0 && (
+              <span className="mono-meta">
+                {history.length} saved · {totalReads.toLocaleString()} reads in total
+              </span>
             )}
           </div>
-        </div>
+          {historyError && <p role="alert" className="mt-4 text-sm text-danger">{historyError}</p>}
+          {history === null ? (
+            <div className="mt-5 space-y-3">{[0, 1, 2].map((i) => <div key={i} className="skeleton h-14" />)}</div>
+          ) : history.length === 0 && !historyError ? (
+            <Empty title="No saved analyses yet" body="Analyses you run while signed in are saved here automatically." />
+          ) : (
+            <ul className="mt-5 divide-y divide-line/70">
+              {history.slice(0, 6).map((item) => (
+                <li key={item.id}>
+                  <button
+                    onClick={() => openItem(item.id)}
+                    disabled={openingId !== null}
+                    className="flex w-full items-center gap-4 rounded-lg px-2 py-3 text-left transition-colors hover:bg-white/[0.03] disabled:opacity-50"
+                  >
+                    <FiFileText className="shrink-0 text-biolum" aria-hidden />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{item.filename}</span>
+                      <span className="mono-meta">{new Date(item.uploaded_at).toLocaleString()}</span>
+                    </span>
+                    <span className="hidden text-right font-mono text-xs text-mute sm:block">
+                      {item.unique_species_identified} taxa · {item.total_reads_processed} reads
+                    </span>
+                    {openingId === item.id ? <DnaSpinner size={16} /> : <FiArrowRight className="text-mute" aria-hidden />}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {history && history.length > 6 && (
+            <div className="mt-4"><LinkButton href="/history" variant="ghost" className="text-sm">View all {history.length} <FiArrowRight aria-hidden /></LinkButton></div>
+          )}
+        </section>
       </div>
+    </WorkspaceShell>
+  );
+}
+
+function Mini({ k, v }: { k: string; v: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-line px-4 py-3">
+      <p className="mono-meta">{k}</p>
+      <p className="mt-1 font-display text-3xl">{v}</p>
     </div>
+  );
+}
+
+function Empty({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
+  return (
+    <div className="mt-5 flex flex-col items-start gap-3 rounded-xl border border-dashed border-line p-6">
+      <p className="font-medium">{title}</p>
+      <p className="text-sm text-mute">{body}</p>
+      {action}
+    </div>
+  );
+}
+
+function Svc({ icon: Icon, name, state, text }: { icon: React.ComponentType<{ className?: string }>; name: string; state: 'ok' | 'warn' | 'bad' | 'pending'; text: string }) {
+  const tone = { ok: 'bg-teal', warn: 'bg-warn', bad: 'bg-danger', pending: 'bg-mute' }[state];
+  const label = { ok: 'OK', warn: 'Warning', bad: 'Error', pending: 'Checking' }[state];
+  return (
+    <li className="flex items-center gap-3 rounded-xl border border-line px-4 py-3">
+      <Icon className="text-mute" />
+      <span className="flex-1 text-sm">{name}</span>
+      <span className="flex items-center gap-2 font-mono text-xs text-mute">
+        <span className={`h-2 w-2 rounded-full ${tone}`} aria-hidden />
+        <span className="sr-only">{label}:</span>
+        {text}
+      </span>
+    </li>
   );
 }

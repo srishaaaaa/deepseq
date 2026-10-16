@@ -1,31 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
-import Link from 'next/link';
-import { FiFileText, FiLoader, FiTrash2, FiEdit2, FiCheck, FiX, FiShare2, FiCopy } from 'react-icons/fi';
-import {
-  fetchHistory,
-  fetchHistoryItem,
-  isLoggedIn,
-  logout,
-  getCurrentUser,
-  getUsername,
-  renameAnalysis,
-  deleteAnalysis,
-  subscribeToHistory,
-  setShared,
-  HistoryItem,
-} from '@/lib/api';
-import AppNavbar from '@/components/nav/AppNavbar';
-import Card from '@/components/ui/Card';
-import PageHeader from '@/components/ui/PageHeader';
-import LoadingState from '@/components/ui/Spinner';
-import EmptyState from '@/components/ui/EmptyState';
-import ConfirmDialog from '@/components/ui/ConfirmDialog';
-
-const OceanScene = dynamic(() => import('@/components/ocean/OceanScene'), { ssr: false });
+import { FiFileText, FiSearch, FiArrowRight } from 'react-icons/fi';
+import WorkspaceShell from '@/components/workspace/WorkspaceShell';
+import { LinkButton } from '@/components/ui/Button';
+import DnaSpinner from '@/components/ui/DnaSpinner';
+import { fetchHistory, fetchHistoryItem, HistoryItem } from '@/lib/api';
 
 export default function HistoryPage() {
   const router = useRouter();
@@ -33,48 +14,21 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [openingId, setOpeningId] = useState<string | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState('');
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [sharingId, setSharingId] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
-  const reload = useCallback(async () => {
-    try {
-      const history = await fetchHistory();
-      setItems(history);
-    } catch (err: any) {
-      setError(err.message);
-    }
-  }, []);
-
+  // WorkspaceShell enforces login (redirects to /login) before this mounts.
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-
     (async () => {
-      const loggedIn = await isLoggedIn();
-      if (!loggedIn) {
-        router.replace('/login');
-        return;
-      }
-      const user = await getCurrentUser();
-      setUsername(getUsername(user));
-
-      await reload();
-      setLoading(false);
-
-      // Live-update the list on insert/update/delete — e.g. if an upload
-      // finishes in another tab, or a teammate's analysis lands while you're
-      // both looking at a shared account.
-      if (user) {
-        unsubscribe = subscribeToHistory(user.id, reload);
+      try {
+        const history = await fetchHistory();
+        setItems(history);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
     })();
-
-    return () => unsubscribe?.();
-  }, [router, reload]);
+  }, []);
 
   const openItem = async (id: string) => {
     setOpeningId(id);
@@ -88,207 +42,61 @@ export default function HistoryPage() {
     }
   };
 
-  const startEditing = (item: HistoryItem, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingId(item.id);
-    setEditValue(item.filename);
-  };
-
-  const cancelEditing = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setEditingId(null);
-  };
-
-  const saveRename = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const trimmed = editValue.trim();
-    if (!trimmed) return;
-    try {
-      await renameAnalysis(id, trimmed);
-      setEditingId(null);
-      // Realtime subscription will refresh the list; update locally too for instant feedback.
-      setItems((prev) => prev.map((it) => (it.id === id ? { ...it, filename: trimmed } : it)));
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
-  const requestDelete = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setConfirmDeleteId(id);
-  };
-
-  const confirmDelete = async () => {
-    const id = confirmDeleteId;
-    if (!id) return;
-    setDeletingId(id);
-    try {
-      await deleteAnalysis(id);
-      setItems((prev) => prev.filter((it) => it.id !== id));
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setDeletingId(null);
-      setConfirmDeleteId(null);
-    }
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    router.push('/login');
-  };
-
-  const toggleShare = async (item: HistoryItem, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSharingId(item.id);
-    try {
-      const newValue = !item.is_shared;
-      await setShared(item.id, newValue);
-      setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, is_shared: newValue } : it)));
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setSharingId(null);
-    }
-  };
-
-  const copyShareLink = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const url = `${window.location.origin}/share/${id}`;
-    navigator.clipboard.writeText(url);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return q ? items.filter((i) => i.filename.toLowerCase().includes(q)) : items;
+  }, [items, query]);
 
   return (
-    <div className="relative min-h-screen bg-brand-950 text-white">
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-brand-950 via-brand-900 to-brand-950" />
-        <div className="absolute -top-32 right-1/4 h-[26rem] w-[26rem] rounded-full bg-cyan-500/[0.06] blur-[120px]" />
-        <div className="absolute bottom-0 left-0 h-[22rem] w-[22rem] rounded-full bg-teal-500/[0.06] blur-[110px]" />
-      </div>
-      <div className="pointer-events-none fixed inset-0 z-[1] opacity-40">
-        <OceanScene variant="light" fish />
-      </div>
-
-      <div className="relative z-10">
-      <AppNavbar username={username} onLogout={handleLogout} />
-
-      <div className="p-8">
-        <div className="max-w-2xl mx-auto animate-fade-in">
-          <PageHeader
-            title="Analysis History"
-            subtitle={username ? `Signed in as ${username}` : undefined}
-          />
-
-          {loading && <LoadingState />}
-
-          {error && <p className="text-danger-400 mb-4">{error}</p>}
-
-          {!loading && items.length === 0 && !error && (
-            <Card padding="lg">
-              <EmptyState
-                icon={<FiFileText />}
-                title="No analyses yet."
-                action={
-                  <Link href="/upload" className="text-brand-400 hover:underline">
-                    Upload a file to get started.
-                  </Link>
-                }
-              />
-            </Card>
-          )}
-
-          <div className="space-y-3">
-            {items.map((item, i) => (
-              <Card
-                key={item.id}
-                as="div"
-                onClick={() => editingId !== item.id && openItem(item.id)}
-                className="animate-slide-up w-full flex items-center justify-between text-left transition-[background-color,transform] duration-200 ease-out hover:bg-gray-700/60 hover:-translate-y-0.5 cursor-pointer"
-                style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}
-              >
-                <div className="flex items-center flex-1 min-w-0">
-                  <FiFileText className="mr-3 h-6 w-6 text-brand-300 shrink-0" />
-                  <div className="min-w-0">
-                    {editingId === item.id ? (
-                      <input
-                        autoFocus
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="rounded bg-gray-700 px-2 py-1 text-white text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-400"
-                      />
-                    ) : (
-                      <p className="font-semibold truncate">{item.filename}</p>
-                    )}
-                    <p className="text-sm text-gray-400">
-                      {new Date(item.uploaded_at).toLocaleString()} &middot;{' '}
-                      {item.unique_species_identified} species &middot; {item.total_reads_processed} reads
-                    </p>
-                    {item.is_shared && (
-                      <div className="mt-1 flex items-center gap-2 text-xs">
-                        <span className="text-success-400">Public link active</span>
-                        <button onClick={(e) => copyShareLink(item.id, e)} className="flex items-center gap-1 text-brand-300 hover:text-brand-200 transition-colors">
-                          <FiCopy /> {copiedId === item.id ? 'Copied!' : 'Copy link'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 ml-3 shrink-0">
-                  {openingId === item.id && <FiLoader className="animate-spin h-5 w-5" />}
-                  {editingId === item.id ? (
-                    <>
-                      <button onClick={(e) => saveRename(item.id, e)} className="p-2 text-success-400 hover:text-success-300 transition-colors" title="Save">
-                        <FiCheck />
-                      </button>
-                      <button onClick={cancelEditing} className="p-2 text-gray-400 hover:text-gray-300 transition-colors" title="Cancel">
-                        <FiX />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={(e) => toggleShare(item, e)}
-                        disabled={sharingId === item.id}
-                        className={`p-2 transition-colors disabled:opacity-50 ${item.is_shared ? 'text-success-400 hover:text-success-300' : 'text-gray-400 hover:text-brand-300'}`}
-                        title={item.is_shared ? 'Make private' : 'Share publicly'}
-                      >
-                        {sharingId === item.id ? <FiLoader className="animate-spin" /> : <FiShare2 />}
-                      </button>
-                      <button onClick={(e) => startEditing(item, e)} className="p-2 text-gray-400 hover:text-brand-300 transition-colors" title="Rename">
-                        <FiEdit2 />
-                      </button>
-                      <button
-                        onClick={(e) => requestDelete(item.id, e)}
-                        disabled={deletingId === item.id}
-                        className="p-2 text-gray-400 hover:text-danger-400 transition-colors disabled:opacity-50"
-                        title="Delete"
-                      >
-                        {deletingId === item.id ? <FiLoader className="animate-spin" /> : <FiTrash2 />}
-                      </button>
-                    </>
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
+    <WorkspaceShell title="Reports & History" subtitle="Every analysis you run while signed in" requireAuth>
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <label className="relative w-full sm:w-72">
+            <span className="sr-only">Search by filename</span>
+            <FiSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-mute" aria-hidden />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by filename…" className="field !rounded-full !py-2 !pl-9 text-sm" />
+          </label>
+          <LinkButton href="/upload" className="!py-2 text-sm">New analysis</LinkButton>
         </div>
-      </div>
-      </div>
 
-      <ConfirmDialog
-        open={confirmDeleteId !== null}
-        title="Delete this analysis?"
-        description="This cannot be undone."
-        confirmLabel="Delete"
-        danger
-        loading={deletingId !== null}
-        onConfirm={confirmDelete}
-        onCancel={() => setConfirmDeleteId(null)}
-      />
-    </div>
+        {loading && <div className="space-y-3">{[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-[74px]" />)}</div>}
+
+        {error && <p role="alert" className="mb-4 rounded-xl border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-ink">{error}</p>}
+
+        {!loading && items.length === 0 && !error && (
+          <div className="panel flex flex-col items-center p-12 text-center">
+            <FiFileText className="text-3xl text-biolum" aria-hidden />
+            <p className="mt-4 text-lg font-medium">No analyses yet</p>
+            <p className="mt-1 text-mute">Upload a file to get started — results are saved here automatically.</p>
+            <div className="mt-6"><LinkButton href="/upload">Upload a file</LinkButton></div>
+          </div>
+        )}
+
+        {!loading && items.length > 0 && filtered.length === 0 && <p className="text-mute">No analyses match “{query}”.</p>}
+
+        <ul className="space-y-3">
+          {filtered.map((item, i) => (
+            <li key={item.id} style={{ animation: `rise 0.6s ${Math.min(i, 10) * 50}ms var(--ease-abyss) both` }}>
+              <button
+                onClick={() => openItem(item.id)}
+                disabled={openingId !== null}
+                className="panel panel-hover flex w-full items-center gap-4 p-4 text-left disabled:opacity-50"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-biolum/5">
+                  <FiFileText className="text-biolum" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{item.filename}</span>
+                  <span className="mono-meta">
+                    {new Date(item.uploaded_at).toLocaleString()} &middot; {item.unique_species_identified} species &middot; {item.total_reads_processed} reads
+                  </span>
+                </span>
+                {openingId === item.id ? <DnaSpinner size={18} /> : <FiArrowRight className="text-mute" aria-hidden />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </WorkspaceShell>
   );
 }

@@ -1,201 +1,251 @@
 @import "tailwindcss";
 
-/*
-|--------------------------------------------------------------------------
-| Design tokens
-|--------------------------------------------------------------------------
-| Additive only -- registers new custom tokens/utilities (bg-brand-700,
-| text-success-400, etc.) without redefining any of Tailwind's built-in
-| scale, so every existing className (bg-gray-900, text-blue-300, ...)
-| keeps rendering exactly as it does today.
-*/
+/* ------------------------------------------------------------------
+   DeepSeq design system — "The Living Abyss"
+   Tokens are exposed to Tailwind via @theme so utilities like
+   bg-abyss, text-biolum, border-line, font-display all work.
+   ------------------------------------------------------------------ */
 
 @theme {
-  /* Brand/navy scale, formalizing the app's existing dark navy/blue palette */
-  --color-brand-950: #0a1120;
-  --color-brand-900: #0f1b33;
-  --color-brand-800: #16264a;
-  --color-brand-700: #1e3364;
-  --color-brand-600: #2b4a8f;
-  --color-brand-500: #3b63c4;
-  --color-brand-400: #5c86e8;
-  --color-brand-300: #8fabf0;
-  --color-brand-200: #b9cef6;
+  --color-abyss: #030810;
+  --color-midnight: #061525;
+  --color-navy: #0a2238;
+  --color-surface: #0a1c2e;
+  --color-biolum: #41e8ff;
+  --color-teal: #00d5c0;
+  --color-marine: #2678ff;
+  --color-ink: #eaf7ff;
+  --color-mute: #8ca6b9;
+  --color-discovery: #b6ff73;
+  --color-danger: #ff7a8a;
+  --color-warn: #ffc65c;
+  --color-line: rgba(140, 166, 185, 0.16);
+  --color-line-strong: rgba(65, 232, 255, 0.32);
 
-  /* Semantic status colors */
-  --color-success-500: #22c55e;
-  --color-success-400: #4ade80;
-  --color-warning-500: #f59e0b;
-  --color-warning-400: #fbbf24;
-  --color-danger-500: #ef4444;
-  --color-danger-400: #f87171;
-  --color-info-500: #3b82f6;
-  --color-info-400: #60a5fa;
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Radius scale */
-  --radius-card: 0.75rem;
-  --radius-control: 0.5rem;
-  --radius-pill: 9999px;
+  --radius-panel: 18px;
+  --ease-abyss: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Shadow scale for elevation */
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.24);
-  --shadow-elevated: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-  --shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-
-  /* Font scale extension */
-  --font-size-display: 2.5rem;
-  --font-size-display--line-height: 1.1;
+  --animate-rise: rise 0.9s var(--ease-abyss) both;
+  --animate-fade: fade 1.2s ease both;
 }
 
-/*
-|--------------------------------------------------------------------------
-| Theming (dark default + light)
-|--------------------------------------------------------------------------
-| The UI is authored dark-first with hard-coded utilities (text-white,
-| bg-gray-800, bg-brand-950, ...). Rather than touch every page, light mode
-| is a runtime *re-point* of the CSS color variables those utilities
-| already compile down to (`color: var(--color-white)` etc). Toggling
-| `data-theme` on <html> (see components/theme/ThemeProvider.tsx) swaps the
-| whole palette. Accent hues (brand-500/400, danger, success) are kept so
-| primary actions stay on-brand; only the surface + text ramps flip.
-*/
-
 :root {
+  --dur-fast: 160ms;
+  --dur-med: 320ms;
+  --dur-slow: 700ms;
+  /* categorical chart palette — validated for CVD + contrast on #0A1C2E */
+  --cat-1: #0e9fb4;
+  --cat-2: #bf821c;
+  --cat-3: #4c86ff;
+  --cat-4: #d9607a;
+  --cat-5: #8c7bf0;
+  --cat-other: #5b7184;
   color-scheme: dark;
 }
 
+html {
+  background: var(--color-abyss);
+  scroll-behavior: smooth;
+}
+
 body {
-  background-color: var(--color-brand-950);
-  color: var(--color-white);
+  background: var(--color-abyss);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
-:root[data-theme="light"] {
-  color-scheme: light;
-
-  /* Text: "white" body copy becomes near-black ink */
-  --color-white: #0b1220;
-
-  /* Navbar / ghost-button text ramp */
-  --color-slate-100: #0f172a;
-  --color-slate-200: #1e293b;
-  --color-slate-300: #334155;
-
-  /* Neutral ramp: 300-500 are text, 600-950 are surfaces/borders */
-  --color-gray-300: #334155;
-  --color-gray-400: #52607a;
-  --color-gray-500: #5b6b86;
-  --color-gray-600: #d5dde8;
-  --color-gray-700: #e9eef5;
-  --color-gray-800: #ffffff;
-  --color-gray-900: #eef2f7;
-  --color-gray-950: #e6ebf2;
-
-  /* Brand navy scale: dark backgrounds -> pale tints, accents kept */
-  --color-brand-950: #eef2f9;
-  --color-brand-900: #dbe4f3;
-  --color-brand-800: #cdd9ee;
-  --color-brand-700: #b7c6e6;
-  --color-brand-600: #8aa5da;
-  --color-brand-500: #3b63c4;
-  --color-brand-400: #4f78dc;
-  --color-brand-300: #2a4a9e;
-  --color-brand-200: #24397a;
+::selection {
+  background: rgba(65, 232, 255, 0.28);
+  color: #fff;
 }
 
-/* Filled action buttons/links keep light text on their accent fill even
-   though `text-white` now resolves to ink. */
-:root[data-theme="light"] :is(a, button).bg-brand-500,
-:root[data-theme="light"] :is(a, button).bg-brand-400,
-:root[data-theme="light"] :is(a, button).bg-danger-500,
-:root[data-theme="light"] :is(a, button).bg-success-500 {
-  color: #ffffff;
+/* Keyboard focus is always visible and on-brand */
+:focus-visible {
+  outline: 2px solid var(--color-biolum);
+  outline-offset: 3px;
+  border-radius: 6px;
 }
 
-/*
-|--------------------------------------------------------------------------
-| Motion
-|--------------------------------------------------------------------------
-| Respects prefers-reduced-motion: the animation classes only exist under
-| the "no-preference" media query, and are explicitly neutralized under
-| "reduce" so a user with that OS setting never sees them regardless of
-| where they're applied.
-*/
-
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
 }
 
-@keyframes slide-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ---------- Keyframes ---------- */
+@keyframes rise {
+  from { opacity: 0; transform: translate3d(0, 24px, 0); filter: blur(6px); }
+  to   { opacity: 1; transform: none; filter: none; }
 }
-
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes word {
+  from { opacity: 0; transform: translate3d(0, 0.6em, 0) rotate(2deg); filter: blur(8px); }
+  to   { opacity: 1; transform: none; filter: none; }
+}
+@keyframes scrollLine {
+  0%   { transform: scaleY(0); transform-origin: top; }
+  45%  { transform: scaleY(1); transform-origin: top; }
+  55%  { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+@keyframes pulseRing {
+  0%   { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes caustics {
+  0%   { transform: translate3d(0, 0, 0) scale(1.1) rotate(0deg); }
+  50%  { transform: translate3d(-3%, 2%, 0) scale(1.18) rotate(3deg); }
+  100% { transform: translate3d(0, 0, 0) scale(1.1) rotate(0deg); }
+}
+@keyframes beam {
+  0%, 100% { opacity: 0.32; transform: rotate(-14deg) translateX(0); }
+  50%      { opacity: 0.55; transform: rotate(-11deg) translateX(3%); }
+}
+@keyframes drift {
+  from { transform: translateX(-20vw); }
+  to   { transform: translateX(120vw); }
+}
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+@keyframes dash { to { stroke-dashoffset: -40; } }
+@keyframes helixSpin {
+  0%   { transform: scaleX(1); }
+  50%  { transform: scaleX(-1); }
+  100% { transform: scaleX(1); }
+}
+@keyframes pageIn {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to   { opacity: 1; transform: none; }
 }
 
-/* Hero globe ambiance (components/globe/HeroGlobe.tsx) */
-@keyframes globe-breathe {
-  0%, 100% { transform: scale(1); opacity: 0.7; }
-  50% { transform: scale(1.06); opacity: 1; }
-}
-
-@keyframes glint {
-  0%, 100% { opacity: 0; transform: scale(0.6); }
-  50% { opacity: 1; transform: scale(1); }
-}
-
-@keyframes hud-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes hud-spin-reverse {
-  from { transform: rotate(360deg); }
-  to { transform: rotate(0deg); }
-}
-
-/* Auth panel DNA helix (components/auth/DnaHelix.tsx) */
-@keyframes dna-spin {
-  from { transform: rotateY(0deg); }
-  to { transform: rotateY(360deg); }
-}
-
-/* Click ripple feedback (components/motion/useClickRipples.tsx) */
-@keyframes water-ripple {
-  from { transform: scale(1); opacity: 0.7; }
-  to { transform: scale(16); opacity: 0; }
-}
-
-/* Underwater caustics (app/page.tsx ocean backdrop) -- two large soft
-   radial patches drifting slowly and out of phase, standing in for
-   sunlight refracting through a moving water surface. Pure CSS
-   background-position animation, layered under the WebGL creatures. */
-@keyframes caustic-drift-a {
-  0%, 100% { background-position: 10% 20%, 70% 60%; }
-  50% { background-position: 30% 35%, 55% 75%; }
-}
-@keyframes caustic-drift-b {
-  0%, 100% { background-position: 80% 15%, 20% 70%; }
-  50% { background-position: 60% 30%, 40% 55%; }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .animate-fade-in { animation: fade-in 200ms ease-out both; }
-  .animate-slide-up { animation: slide-up 240ms ease-out both; }
-  .animate-shimmer { animation: shimmer 1.6s linear infinite; }
-  .animate-caustic-a { animation: caustic-drift-a 22s ease-in-out infinite; }
-  .animate-caustic-b { animation: caustic-drift-b 28s ease-in-out infinite; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-fade-in,
-  .animate-slide-up,
-  .animate-shimmer,
-  .animate-caustic-a,
-  .animate-caustic-b {
-    animation: none;
+/* ---------- Reusable component classes ---------- */
+@layer components {
+  .panel {
+    position: relative;
+    background: linear-gradient(180deg, rgba(10, 34, 56, 0.72), rgba(6, 21, 37, 0.78));
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-panel);
+    box-shadow: 0 1px 0 rgba(234, 247, 255, 0.04) inset, 0 24px 60px -30px rgba(0, 0, 0, 0.8);
   }
+  .panel-hover {
+    transition: border-color var(--dur-med) var(--ease-abyss), transform var(--dur-med) var(--ease-abyss),
+      box-shadow var(--dur-med) var(--ease-abyss);
+  }
+  .panel-hover:hover {
+    border-color: var(--color-line-strong);
+    transform: translateY(-2px);
+    box-shadow: 0 1px 0 rgba(234, 247, 255, 0.05) inset, 0 30px 70px -30px rgba(0, 0, 0, 0.9),
+      0 0 0 1px rgba(65, 232, 255, 0.06);
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--color-biolum);
+  }
+  .mono-meta {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--color-mute);
+  }
+  .link-underline {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    transition: background-size var(--dur-med) var(--ease-abyss), color var(--dur-fast);
+  }
+  .link-underline:hover,
+  .link-underline:focus-visible {
+    background-size: 100% 1px;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, rgba(140, 166, 185, 0.06) 25%, rgba(140, 166, 185, 0.16) 50%, rgba(140, 166, 185, 0.06) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s linear infinite;
+    border-radius: 10px;
+  }
+  .field {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--color-line);
+    background: rgba(3, 8, 16, 0.6);
+    padding: 0.7rem 0.9rem;
+    color: var(--color-ink);
+    font-size: 0.95rem;
+    transition: border-color var(--dur-fast), box-shadow var(--dur-fast);
+  }
+  .field::placeholder { color: rgba(140, 166, 185, 0.7); }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-biolum);
+    box-shadow: 0 0 0 3px rgba(65, 232, 255, 0.15);
+  }
+  .text-glow {
+    text-shadow: 0 0 24px rgba(65, 232, 255, 0.35);
+  }
+  .grain::after {
+    content: "";
+    position: fixed;
+    inset: -50%;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .page-enter {
+    animation: pageIn 0.6s var(--ease-abyss) both;
+  }
+  /* Scroll reveal: elements start hidden only once JS has marked the document ready. */
+  .js-ready [data-reveal] {
+    opacity: 0;
+    transform: translate3d(0, 28px, 0);
+    transition: opacity 0.9s var(--ease-abyss), transform 0.9s var(--ease-abyss);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+  .js-ready [data-reveal].is-visible {
+    opacity: 1;
+    transform: none;
+  }
+  .word-reveal > span {
+    display: inline-block;
+    animation: word 0.9s var(--ease-abyss) both;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(65, 232, 255, 0.25) transparent;
+  }
+}
+
+/* ---------- Reduced motion (OS preference OR in-app toggle) ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+html[data-motion="reduced"] *,
+html[data-motion="reduced"] *::before,
+html[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Windows High Contrast / forced colors: keep panels outlined */
+@media (forced-colors: active) {
+  .panel { border: 1px solid CanvasText; }
 }

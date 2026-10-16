@@ -1,64 +1,93 @@
 "use client";
 
 import { useState } from 'react';
+import { FiAlertTriangle, FiCheck, FiPlay } from 'react-icons/fi';
+import WorkspaceShell from '@/components/workspace/WorkspaceShell';
+import { Button } from '@/components/ui/Button';
+import { recordAnalyzeRequest } from '@/components/ui/ServiceStatus';
 
-/** Minimal dev utility for hitting /api/analyze directly, bypassing the
- * real /upload flow's UI/auth/history-saving -- useful for checking the
- * backend's raw JSON response while iterating on it.
- *
- * Note: this file was temporarily replaced with a throwaway diagnostic
- * (an isolated GLTF-render test, used to debug the ocean-scene creature
- * materials) and has been rebuilt here to its apparent original purpose.
- * The exact prior content wasn't recoverable (not under git tracking) --
- * flagging that plainly rather than pretending this matches byte-for-byte. */
+// Define a type for the expected result structure for better code quality
+type AnalysisData = {
+  analysis: any;
+  geo: any;
+};
+
 export default function TestApiPage() {
-  const [status, setStatus] = useState<string | null>(null);
-  const [response, setResponse] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [result, setResult] = useState<AnalysisData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const file = (event.currentTarget.elements.namedItem('file') as HTMLInputElement)?.files?.[0];
-    if (!file) return;
+  const handleTestClick = async () => {
+    setIsLoading(true);
+    setResult(null);
+    setError(null);
 
-    setLoading(true);
-    setStatus(null);
-    setResponse(null);
     try {
+      // Create sample FASTA data in memory instead of reading a file
+      const fastaContent = `>seq1_Orca_DNA
+GATTACATTAGGATTACATTAC
+>seq2_Tuna_DNA
+AGCTAGCTAGCTAGCTAGCT
+>seq3_Unknown_Creature
+CCCCCCCCCCCCCCCCCCCC`;
+
+      const blob = new Blob([fastaContent], { type: 'text/plain' });
+      const file = new File([blob], "sample_sequences.fasta", { type: "text/plain" });
+
+      // Create a FormData object to send the file
       const formData = new FormData();
       formData.append('file', file);
-      const res = await fetch('/api/analyze', { method: 'POST', body: formData });
-      const text = await res.text();
-      setStatus(`${res.status} ${res.statusText}`);
-      try {
-        setResponse(JSON.stringify(JSON.parse(text), null, 2));
-      } catch {
-        setResponse(text);
+
+      // Call your own Next.js API route
+      const started = performance.now();
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const responseData = await response.json();
+      recordAnalyzeRequest({ ok: response.ok, at: Date.now(), ms: Math.round(performance.now() - started), message: response.ok ? undefined : responseData.error });
+
+      if (!response.ok) {
+        throw new Error(responseData.error || 'An API error occurred.');
       }
+
+      setResult(responseData);
+
     } catch (err: any) {
-      setStatus('Request failed');
-      setResponse(err?.message ?? String(err));
+      setError(err.message);
+      console.error(err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: 24, fontFamily: 'monospace', color: '#e5e7eb', background: '#0f172a', minHeight: '100vh' }}>
-      <h1>/api/analyze -- raw test</h1>
-      <p style={{ color: '#94a3b8' }}>Uploads a file straight to the backend, no auth/history/UI in the way.</p>
-      <form onSubmit={handleSubmit} style={{ marginTop: 16 }}>
-        <input type="file" name="file" accept=".fasta,.fastq,.fa,.fna" />
-        <button type="submit" disabled={loading} style={{ marginLeft: 12 }}>
-          {loading ? 'Sending...' : 'Send'}
-        </button>
-      </form>
-      {status && <p style={{ marginTop: 16 }}>Status: {status}</p>}
-      {response && (
-        <pre style={{ marginTop: 8, whiteSpace: 'pre-wrap', background: '#1e293b', padding: 12, borderRadius: 8 }}>
-          {response}
-        </pre>
-      )}
-    </div>
+    <WorkspaceShell title="API Test" subtitle="Send a built-in 3-record FASTA file to /api/analyze">
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div className="panel p-6">
+          <p className="text-mute">Click the button below to send a sample FASTA file to your API endpoint.</p>
+          <Button onClick={handleTestClick} loading={isLoading} className="mt-5">
+            {isLoading ? 'Testing API...' : <><FiPlay aria-hidden /> Run API Test</>}
+          </Button>
+        </div>
+
+        {error && (
+          <div role="alert" className="panel border-danger/40 p-6">
+            <h2 className="flex items-center gap-2 text-lg text-danger"><FiAlertTriangle aria-hidden /> Error</h2>
+            <pre className="mt-3 overflow-x-auto whitespace-pre-wrap font-mono text-sm text-ink/85">{error}</pre>
+          </div>
+        )}
+
+        {result && (
+          <div className="panel p-6" style={{ animation: 'rise 0.5s var(--ease-abyss) both' }}>
+            <h2 className="flex items-center gap-2 text-lg text-teal"><FiCheck aria-hidden /> Success! API Response:</h2>
+            <pre className="mt-3 max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-xl border border-line bg-abyss/70 p-4 font-mono text-xs text-ink/85 scrollbar-thin">
+              {JSON.stringify(result, null, 2)}
+            </pre>
+          </div>
+        )}
+      </div>
+    </WorkspaceShell>
   );
 }
